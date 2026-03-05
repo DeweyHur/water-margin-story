@@ -1,0 +1,8 @@
+maps:
+  - id: 1
+    name: Liangshan Map
+    width: 10
+    height: 10
+    towns:
+      - Liangshan
+      - Bianjing

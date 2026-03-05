@@ -5,10 +5,12 @@
 에이전트들이 Water Margin Story 게임을 직접 개발한다.
 
 사용법:
-    python build.py                          # 대화형 메뉴
-    python build.py feature "전투 스킬 추가"  # 기능 개발
-    python build.py content "새 이벤트 10개"  # 컨텐츠 생성
-    python build.py review                   # 코드 리뷰
+    python build.py                                   # 대화형 메뉴
+    python build.py feature "전투 스킬 추가"            # 기능 개발
+    python build.py content "새 이벤트 10개"            # 컨텐츠 생성
+    python build.py review                            # 코드 리뷰
+    python build.py test                                      # 스모크 테스트
+    python build.py ui "전투 결과를 Rich Panel로 화려하게 표시"  # UI 개발
 """
 from __future__ import annotations
 
@@ -34,8 +36,10 @@ MENU = """
 [bold cyan]게임 개발 크루 메뉴[/]
 
   [1] 기능 개발   — 새 기능 기획·구현·리뷰 (디자이너 + 개발자 + 리뷰어)
-  [2] 컨텐츠 생성 — 이벤트/영웅/마을 추가 (스토리텔러)
-  [3] 코드 리뷰   — 현재 코드베이스 품질 검토 (리뷰어)
+  [2] 컨텐츠 생성 — 이벤트/영웅/마을 추가 (스토리텔러 + 개발자 + 리뷰어)
+  [3] 코드 리뷰   — 현재 코드베이스 품질 검토 (리뷰어 + 개발자)
+  [4] 스모크 테스트 — 게임 자율 실행 테스트 + 버그 픽스 (테스터 + 개발자)
+  [5] UI 개발     — 터미널 UI/UX 개선 (UI 디자이너 + UI 개발자)
   [0] 종료
 """
 
@@ -51,6 +55,13 @@ EXAMPLES = {
         "새 랜덤 이벤트 10개 추가 (수호지 고사 기반)",
         "새 영웅 5명 추가 (천살성 호한 중심)",
         "새 마을 3개 추가 (북송 남부 지역)",
+    ],
+    "5": [
+        "전투 결과를 Rich Panel로 화려하게 표시",
+        "영웅 선택 화면에 통계 막대 그래프 추가",
+        "게임 상태를 실시간으로 보여주는 사이드바 레이아웃 추가",
+        "턴 헤더를 더 크고 시각적으로 개선",
+        "메뉴 선택창을 번호 입력 대신 화살표 커서 방식으로 변경",
     ],
 }
 
@@ -78,17 +89,17 @@ def run_interactive() -> None:
 
     while True:
         console.print(MENU)
-        choice = Prompt.ask("선택", choices=["0", "1", "2", "3"], default="0")
+        choice = Prompt.ask("선택", choices=["0", "1", "2", "3", "4", "5"], default="0")
 
         if choice == "0":
             console.print("[dim]종료합니다.[/]")
             break
 
-        mode_map = {"1": DevMode.FEATURE, "2": DevMode.CONTENT, "3": DevMode.REVIEW}
+        mode_map = {"1": DevMode.FEATURE, "2": DevMode.CONTENT, "3": DevMode.REVIEW, "4": DevMode.TEST, "5": DevMode.UI}
         mode = mode_map[choice]
         request = ""
 
-        if choice in ("1", "2"):
+        if choice in ("1", "2", "5"):
             print_examples(choice)
             request = Prompt.ask("\n개발 요청 내용을 입력하세요")
             if not request.strip():
@@ -118,10 +129,10 @@ def run_cli(args: list[str]) -> None:
     mode_str = args[0].lower()
     request = " ".join(args[1:])
 
-    mode_map = {"feature": DevMode.FEATURE, "content": DevMode.CONTENT, "review": DevMode.REVIEW}
+    mode_map = {"feature": DevMode.FEATURE, "content": DevMode.CONTENT, "review": DevMode.REVIEW, "test": DevMode.TEST, "ui": DevMode.UI}
     if mode_str not in mode_map:
         console.print(f"[red]알 수 없는 모드: {mode_str}[/]")
-        console.print("사용 가능한 모드: feature, content, review")
+        console.print("사용 가능한 모드: feature, content, review, test, ui")
         sys.exit(1)
 
     crew = GameDevCrew()

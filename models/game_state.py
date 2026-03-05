@@ -50,6 +50,9 @@ class GameState(BaseModel):
     def is_over(self) -> bool:
         return self.phase in (GamePhase.WON, GamePhase.LOST)
 
+    def turns_remaining(self) -> int:
+        return max(0, self.max_turns - self.turn)
+
     def log_event(self, event: GameEvent) -> None:
         self.events.append(event)
 

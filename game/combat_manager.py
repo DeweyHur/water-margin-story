@@ -465,3 +465,32 @@ class CombatManager:
         else:
             attacker.hp = max(1, attacker.hp - random.randint(20, 40))
         return won
+
+    def resolve_siege(self, hero: Hero, town: Town) -> BattleResult:
+        """
+        AI-facing siege wrapper: hero + town 으로 Army를 임시 생성해
+        siege_battle를 호출하고 도시 점령 여부를 갱신한다.
+        """
+        attacker = Army(
+            id=f"army_{hero.id}",
+            name=f"{hero.name_ko}의 군대",
+            faction_id=hero.faction_id,
+            general_id=hero.id,
+            troops=max(1, hero.current_army),
+            max_troops=max(1, hero.current_army),
+            morale=80,
+        )
+        garrison = max(100, town.garrison_strength * 100)
+        defender = Army(
+            id=f"garrison_{town.id}",
+            name=f"{town.name_ko} 수비군",
+            faction_id=town.controlled_by_faction or "neutral",
+            troops=garrison,
+            max_troops=garrison,
+            morale=70,
+        )
+        result = self.siege_battle(attacker, defender, town,
+                                   attacker_general=hero)
+        # 승리 시 영웅 병력 갱신
+        hero.current_army = max(0, attacker.troops)
+        return result
