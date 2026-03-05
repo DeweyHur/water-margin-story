@@ -1,0 +1,52 @@
+random_events:
+  - id: ambush
+    name_ko: 관군의 매복
+    trigger: any_town
+    probability: 0.10
+    effect:
+      type: combat
+      enemy_strength: 3
+    message: "관군이 매복하고 있었다! 전투가 시작됐다."
+
+  - id: recruit_bonus
+    name_ko: 자원병 합류
+    trigger: any_town
+    probability: 0.08
+    effect:
+      type: army_delta
+      army_delta: 200
+    message: "당신의 명성을 듣고 의로운 장정들이 군에 합류했습니다."
+
+  - id: dynasty_shock
+    name_ko: 송의 위기
+    trigger: bianjing
+    probability: 0.20
+    effect:
+      type: dynasty_stability
+      stability_delta: -10
+    message: "금군이 국경을 침범했다는 소식이 들려온다. 황실이 흔들리고 있다."
+
+dynasty_events:
+  - turn: 5
+    message: "축가장(祝家莊)과의 갈등이 고조되고 있습니다. 양산박의 결단이 필요합니다."
+    stability_delta: -2
+
+  - turn: 15
+    message: "조개(晁蓋) 두령이 증두시 전투에서 전사했습니다. 송강이 수령으로 추대됩니다."
+    stability_delta: -5
+
+  - turn: 30
+    message: "금나라가 요나라를 멸망시키고 연운십육주를 요구하며 남하를 시작했습니다."
+    stability_delta: -10
+
+  - turn: 45
+    message: "정강의 변: 금군이 변경을 포위했습니다. 북송의 운명이 풍전등화와 같습니다."
+    stability_delta: -20
+
+event_chains:
+  - id: liangshan_gathering
+    name: 108 호한 집결
+    steps:
+      - condition: "controlled_towns_count >= 5"
+        message: "양산박의 위세가 천하를 진동시켜 108 호한이 모두 모였습니다."
+        reward: { prestige: 500, gold: 5000 }

@@ -1,0 +1,132 @@
+"""Game engine — orchestrates turns, agents, and win/loss conditions."""
+from __future__ import annotations
+
+import random
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+import yaml
+
+from models import GameState, GamePhase, Hero, Town, GameEvent, EventType, HeroClass
+from models.faction import Faction
+from game.turn_manager import TurnManager
+from game.event_system import EventSystem
+from game.combat_manager import CombatManager
+
+if TYPE_CHECKING:
+    from ui.terminal_ui import TerminalUI
+
+
+class GameEngine:
+    """Top-level game controller."""
+
+    def __init__(self, ui: "TerminalUI") -> None:
+        self.ui = ui
+        self.state = GameState()
+        self.turn_manager = TurnManager(self.state)
+        self.event_system = EventSystem(self.state)
+        self.combat_manager = CombatManager(self.state)
+        self._config_dir = Path(__file__).parent.parent / "config"
+
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
+
+    def run(self) -> None:
+        self.ui.show_title()
+        self._setup()
+        self.state.phase = GamePhase.PLAYING
+
+        while not self.state.is_over():
+            self.ui.show_turn_header(self.state)
+            self._process_turn()
+            self._check_win_conditions()
+
+        self.ui.show_game_over(self.state)
+
+    # ------------------------------------------------------------------
+    # Setup
+    # ------------------------------------------------------------------
+
+    def _setup(self) -> None:
+        self._load_factions()
+        self._load_towns()
+        heroes_data = self._load_hero_roster()
+        
+        # Filter heroes by faction or availability
+        chosen = self.ui.choose_hero(heroes_data)
+        chosen.is_player_controlled = True
+        chosen.player_id = "player1"
+        self.state.heroes[chosen.id] = chosen
+        self.state.player_ids.append("player1")
+
+        # Add all other heroes to the state as AI
+        for h in heroes_data:
+            if h.id != chosen.id:
+                self.state.heroes[h.id] = h
+
+        self.ui.show_setup_complete(self.state, chosen)
+
+    def _load_factions(self) -> None:
+        with open(self._config_dir / "factions.yaml", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        for f_data in data["factions"]:
+            faction = Faction(**f_data)
+            self.state.factions[faction.id] = faction
+
+    def _load_towns(self) -> None:
+        with open(self._config_dir / "towns.yaml", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        for t in data["towns"]:
+            town = Town(**t)
+            self.state.towns[town.id] = town
+
+    def _load_hero_roster(self) -> list[Hero]:
+        with open(self._config_dir / "heroes.yaml", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        return [Hero(**h) for h in data["heroes"]]
+
+    # ------------------------------------------------------------------
+    # Turn processing
+    # ------------------------------------------------------------------
+
+    def _process_turn(self) -> None:
+        self.state.turn += 1
+
+        # 1. Resource Production
+        self._produce_resources()
+
+        # 2. Dynasty stability decay
+        self.state.dynasty_stability -= 2
+        self.event_system.fire_dynasty_events()
+
+        # 3. Each hero takes their turn
+        # Sort by agility for turn order
+        sorted_heroes = sorted(self.state.heroes.values(), key=lambda x: x.agility, reverse=True)
+        for hero in sorted_heroes:
+            if not hero.is_alive():
+                continue
+            hero.restore_action_points()
+            if hero.is_player_controlled:
+                self.turn_manager.player_turn(hero, self.ui)
+            else:
+                self.turn_manager.ai_turn(hero)
+
+        # 4. Random events
+        self.event_system.fire_random_events()
+
+    def _produce_resources(self) -> None:
+        """Collect gold and food from controlled towns."""
+        for town in self.state.towns.values():
+            if town.controlled_by_faction and town.controlled_by_faction in self.state.factions:
+                faction = self.state.factions[town.controlled_by_faction]
+                faction.gold += town.tax_yield
+                faction.food += town.food_yield
+
+    def _check_win_conditions(self) -> None:
+        # Simplified win condition: Liangshan controls Bianjing or Gao Qiu is defeated
+        if self.state.towns["bianjing"].controlled_by_faction == "liangshan":
+            self.state.phase = GamePhase.WON
+            self.state.winner_id = "liangshan"
+        elif self.state.dynasty_stability <= 0:
+            self.state.phase = GamePhase.LOST

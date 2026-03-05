@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "▶ 게임 실행",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      "name": "🤖 게임 개발 크루 (Gemini)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/build.py",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}

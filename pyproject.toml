@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "water-margin-story"
+version = "0.1.0"
+description = "A crewAI-powered strategy game inspired by Water Margin (水滸傳)"
+requires-python = ">=3.11"
+dependencies = [
+    "crewai>=0.80.0",
+    "crewai-tools>=0.30.0",
+    "litellm>=1.82.0",
+    "rich>=13.0.0",
+    "pydantic>=2.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "google-genai>=1.0.0",
+]
+
+[project.scripts]
+water-margin = "main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["agents*", "tasks*", "models*", "game*", "tools*", "ui*"]

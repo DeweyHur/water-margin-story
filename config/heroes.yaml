@@ -1,0 +1,165 @@
+heroes:
+  - id: song_jiang
+    name_ko: 송강
+    name_zh: 宋江
+    nickname: 及時雨 (적시우)
+    hero_class: strategist
+    strength: 4
+    intelligence: 9
+    agility: 5
+    reputation: 90
+    faction_id: liangshan
+    leadership: 10
+    loyalty: 100
+    skills: ["leadership_aura", "righteous_call"]
+    description: "108 호한의 수령. 천강성 첫째. 의리로 호걸을 모은다."
+
+  - id: lu_junyi
+    name_ko: 노준의
+    name_zh: 盧俊義
+    nickname: 玉麒麟 (옥기린)
+    hero_class: warrior
+    strength: 10
+    intelligence: 7
+    agility: 7
+    reputation: 85
+    faction_id: liangshan
+    leadership: 9
+    loyalty: 90
+    skills: ["unrivaled_might", "spear_master"]
+    description: "천강성 둘째. 북경 최고의 무장."
+
+  - id: wu_yong
+    name_ko: 오용
+    name_zh: 吳用
+    nickname: 智多星 (지다성)
+    hero_class: strategist
+    strength: 2
+    intelligence: 10
+    agility: 5
+    reputation: 80
+    faction_id: liangshan
+    leadership: 8
+    loyalty: 100
+    skills: ["chain_stratagem", "weather_control"]
+    description: "천강성 셋째. 양산박의 군사. 지략이 뛰어나다."
+
+  - id: lin_chong
+    name_ko: 임충
+    name_zh: 林沖
+    nickname: 豹子頭 (표자두)
+    hero_class: warrior
+    strength: 9
+    intelligence: 6
+    agility: 8
+    reputation: 75
+    faction_id: liangshan
+    leadership: 8
+    loyalty: 85
+    skills: ["serpent_spear", "cavalry_charge"]
+    description: "천강성 여섯째. 전 80만 금군 교두. 고구의 모략으로 몰락했다."
+
+  - id: gao_qiu
+    name_ko: 고구
+    name_zh: 高俅
+    nickname: 太尉 (태위)
+    hero_class: rogue
+    strength: 3
+    intelligence: 8
+    agility: 6
+    reputation: 10
+    faction_id: imperial
+    leadership: 7
+    loyalty: 100
+    skills: ["corruption", "imperial_edict"]
+    description: "북송의 간신. 축구 실력으로 황제의 총애를 얻어 권력을 휘두른다."
+
+  - id: cai_jing
+    name_ko: 채경
+    name_zh: 蔡京
+    nickname: 太師 (태사)
+    hero_class: strategist
+    strength: 2
+    intelligence: 9
+    agility: 4
+    reputation: 15
+    faction_id: imperial
+    leadership: 6
+    loyalty: 100
+    skills: ["tax_extortion", "political_intrigue"]
+    description: "북송의 권신. 고구와 함께 조정을 부패시킨 주역."
+
+  - id: aguda
+    name_ko: 아골타
+    name_zh: 阿骨打
+    nickname: 太祖 (태조)
+    hero_class: warrior
+    strength: 10
+    intelligence: 8
+    agility: 7
+    reputation: 50
+    faction_id: jin
+    leadership: 10
+    loyalty: 100
+    skills: ["iron_cavalry", "conquest"]
+    description: "금나라의 건국자. 강력한 기병을 이끌고 중원을 위협한다."
+
+  - id: wu_song
+    name_ko: 무송
+    name_zh: 武松
+    nickname: 行者 (행자)
+    hero_class: ranger
+    strength: 10
+    intelligence: 6
+    agility: 10
+    reputation: 80
+    faction_id: liangshan
+    leadership: 5
+    loyalty: 95
+    skills: ["tiger_slayer", "drunk_fist"]
+    description: "천강성 열넷째. 호랑이를 맨손으로 잡은 전설의 무장."
+
+  - id: lu_zhishen
+    name_ko: 노지심
+    name_zh: 魯智深
+    nickname: 花和尙 (화화상)
+    hero_class: warrior
+    strength: 9
+    intelligence: 5
+    agility: 6
+    reputation: 80
+    faction_id: liangshan
+    leadership: 6
+    loyalty: 90
+    skills: ["uproot_tree", "staff_master"]
+    description: "천강성 열셋째. 의협심 강한 승려 출신 무장."
+
+  - id: li_kui
+    name_ko: 이규
+    name_zh: 李逵
+    nickname: 黑旋風 (흑선풍)
+    hero_class: warrior
+    strength: 10
+    intelligence: 2
+    agility: 5
+    reputation: 60
+    faction_id: liangshan
+    leadership: 4
+    loyalty: 100
+    skills: ["berserk", "twin_axes"]
+    description: "천강성 스물둘째. 쌍도끼를 쓰는 용맹한 흑인 호한."
+
+  - id: yan_qing
+    name_ko: 연청
+    name_zh: 燕靑
+    nickname: 浪子 (낭자)
+    hero_class: rogue
+    strength: 7
+    intelligence: 8
+    agility: 10
+    reputation: 70
+    faction_id: liangshan
+    leadership: 4
+    loyalty: 95
+    skills: ["wrestling", "infiltration"]
+    description: "지살성 여섯째. 아름다운 외모와 뛰어난 정보 수집 능력."

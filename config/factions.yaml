@@ -1,0 +1,33 @@
+factions:
+  - id: liangshan
+    name_ko: 양산박
+    leader_id: song_jiang
+    gold: 2000
+    food: 5000
+    prestige: 100
+    controlled_towns: [liangshan]
+    relations:
+      imperial: -100
+      jin: -50
+
+  - id: imperial
+    name_ko: 관군 (북송)
+    leader_id: gao_qiu
+    gold: 20000
+    food: 20000
+    prestige: 500
+    controlled_towns: [bianjing, daming, jizhou, yunzhou, dongping, dongchang, cangzhou, taiyuan, jiangzhou, huazhou, qingzhou, dengzhou, mengzhou, weizhou, hangzhou, suzhou, yangzhou, luzhou, jingnan]
+    relations:
+      liangshan: -100
+      jin: -80
+
+  - id: jin
+    name_ko: 금나라
+    leader_id: aguda
+    gold: 10000
+    food: 10000
+    prestige: 300
+    controlled_towns: []
+    relations:
+      imperial: -80
+      liangshan: -50

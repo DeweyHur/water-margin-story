@@ -1,0 +1,260 @@
+towns:
+  - id: liangshan
+    name_ko: 양산박
+    name_zh: 梁山泊
+    town_type: fortress
+    population: 5000
+    max_garrison: 10000
+    tax_yield: 50
+    food_yield: 200
+    defense_level: 5
+    adjacent: [jizhou, yunzhou, dongping]
+    garrison_strength: 5
+    controlled_by_faction: liangshan
+
+  - id: bianjing
+    name_ko: 변경 (개봉부)
+    name_zh: 汴京 (開封府)
+    town_type: metropolis
+    population: 50000
+    max_garrison: 50000
+    tax_yield: 1000
+    food_yield: 500
+    defense_level: 8
+    adjacent: [jizhou, dongchang, daming, taiyuan, huazhou]
+    garrison_strength: 10
+    controlled_by_faction: imperial
+
+  - id: daming
+    name_ko: 대명부
+    name_zh: 大名府
+    town_type: metropolis
+    population: 30000
+    max_garrison: 20000
+    tax_yield: 600
+    food_yield: 400
+    defense_level: 6
+    adjacent: [bianjing, taiyuan, cangzhou]
+    garrison_strength: 7
+    controlled_by_faction: imperial
+
+  - id: jizhou
+    name_ko: 기주
+    name_zh: 濟州
+    town_type: village
+    population: 8000
+    max_garrison: 5000
+    tax_yield: 150
+    food_yield: 150
+    defense_level: 2
+    adjacent: [liangshan, yunzhou, dongchang, bianjing]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  - id: yunzhou
+    name_ko: 운주
+    name_zh: 鄆州
+    town_type: village
+    population: 7000
+    max_garrison: 4000
+    tax_yield: 120
+    food_yield: 180
+    defense_level: 2
+    adjacent: [liangshan, jizhou, dongping]
+    garrison_strength: 2
+    controlled_by_faction: imperial
+
+  - id: dongping
+    name_ko: 동평부
+    name_zh: 東平府
+    town_type: fortress
+    population: 12000
+    max_garrison: 8000
+    tax_yield: 200
+    food_yield: 200
+    defense_level: 4
+    adjacent: [liangshan, yunzhou, dongchang]
+    garrison_strength: 4
+    controlled_by_faction: imperial
+
+  - id: dongchang
+    name_ko: 동창부
+    name_zh: 東昌府
+    town_type: village
+    population: 9000
+    max_garrison: 6000
+    tax_yield: 180
+    food_yield: 150
+    defense_level: 3
+    adjacent: [jizhou, dongping, bianjing]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  - id: cangzhou
+    name_ko: 창주
+    name_zh: 滄州
+    town_type: village
+    population: 6000
+    max_garrison: 4000
+    tax_yield: 100
+    food_yield: 120
+    defense_level: 2
+    adjacent: [daming, taiyuan]
+    garrison_strength: 2
+    controlled_by_faction: imperial
+
+  - id: taiyuan
+    name_ko: 태원부
+    name_zh: 太原府
+    town_type: fortress
+    population: 15000
+    max_garrison: 15000
+    tax_yield: 300
+    food_yield: 200
+    defense_level: 7
+    adjacent: [bianjing, daming, cangzhou, weizhou]
+    garrison_strength: 6
+    controlled_by_faction: imperial
+
+  - id: jiangzhou
+    name_ko: 강주
+    name_zh: 江州
+    town_type: metropolis
+    population: 25000
+    max_garrison: 15000
+    tax_yield: 500
+    food_yield: 600
+    defense_level: 4
+    adjacent: [huazhou, hangzhou]
+    garrison_strength: 5
+    controlled_by_faction: imperial
+
+  - id: huazhou
+    name_ko: 화주
+    name_zh: 華州
+    town_type: village
+    population: 10000
+    max_garrison: 7000
+    tax_yield: 200
+    food_yield: 250
+    defense_level: 3
+    adjacent: [bianjing, jiangzhou, mengzhou]
+    garrison_strength: 4
+    controlled_by_faction: imperial
+
+  - id: qingzhou
+    name_ko: 청주
+    name_zh: 靑州
+    town_type: fortress
+    population: 14000
+    max_garrison: 10000
+    tax_yield: 250
+    food_yield: 250
+    defense_level: 5
+    adjacent: [dongping, dengzhou]
+    garrison_strength: 5
+    controlled_by_faction: imperial
+
+  - id: dengzhou
+    name_ko: 등주
+    name_zh: 登州
+    town_type: village
+    population: 8000
+    max_garrison: 5000
+    tax_yield: 150
+    food_yield: 300
+    defense_level: 3
+    adjacent: [qingzhou]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  - id: mengzhou
+    name_ko: 맹주
+    name_zh: 孟州
+    town_type: village
+    population: 7000
+    max_garrison: 4000
+    tax_yield: 130
+    food_yield: 130
+    defense_level: 2
+    adjacent: [huazhou, weizhou]
+    garrison_strength: 2
+    controlled_by_faction: imperial
+
+  - id: weizhou
+    name_ko: 위주
+    name_zh: 渭州
+    town_type: fortress
+    population: 11000
+    max_garrison: 12000
+    tax_yield: 200
+    food_yield: 150
+    defense_level: 6
+    adjacent: [taiyuan, mengzhou]
+    garrison_strength: 5
+    controlled_by_faction: imperial
+
+  - id: hangzhou
+    name_ko: 항주
+    name_zh: 杭州
+    town_type: metropolis
+    population: 40000
+    max_garrison: 25000
+    tax_yield: 800
+    food_yield: 700
+    defense_level: 5
+    adjacent: [jiangzhou, suzhou]
+    garrison_strength: 6
+    controlled_by_faction: imperial
+
+  - id: suzhou
+    name_ko: 소주
+    name_zh: 蘇州
+    town_type: metropolis
+    population: 35000
+    max_garrison: 20000
+    tax_yield: 700
+    food_yield: 800
+    defense_level: 4
+    adjacent: [hangzhou, yangzhou]
+    garrison_strength: 5
+    controlled_by_faction: imperial
+
+  - id: yangzhou
+    name_ko: 양주
+    name_zh: 揚州
+    town_type: metropolis
+    population: 30000
+    max_garrison: 18000
+    tax_yield: 600
+    food_yield: 500
+    defense_level: 4
+    adjacent: [suzhou, luzhou]
+    garrison_strength: 4
+    controlled_by_faction: imperial
+
+  - id: luzhou
+    name_ko: 노주
+    name_zh: 廬州
+    town_type: village
+    population: 12000
+    max_garrison: 8000
+    tax_yield: 250
+    food_yield: 300
+    defense_level: 3
+    adjacent: [yangzhou, jingnan]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  - id: jingnan
+    name_ko: 형남
+    name_zh: 荊南
+    town_type: fortress
+    population: 15000
+    max_garrison: 12000
+    tax_yield: 300
+    food_yield: 400
+    defense_level: 5
+    adjacent: [luzhou]
+    garrison_strength: 4
+    controlled_by_faction: imperial
