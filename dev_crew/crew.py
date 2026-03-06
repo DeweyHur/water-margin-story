@@ -8,7 +8,10 @@ from pathlib import Path
 
 from crewai import Crew, Process
 
-from dev_crew.agents import game_designer, game_developer, storyteller, code_reviewer, game_tester, ui_designer, ui_developer
+from dev_crew.agents import (
+    game_designer, game_developer, storyteller, code_reviewer,
+    game_tester, ui_designer, ui_developer, project_manager,
+)
 from dev_crew.tasks import (
     design_feature_task,
     implement_feature_task,
@@ -62,13 +65,13 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_feature(self, request: str) -> str:
+        manager = project_manager()
         designer = game_designer()
         developer = game_developer()
         reviewer = code_reviewer()
 
         design_task = design_feature_task(request, designer)
         impl_task = implement_feature_task(request, developer)
-        # impl_task reads the design from context of previous task
         impl_task.context = [design_task]
         review_task = review_code_task(reviewer)
         review_task.context = [impl_task]
@@ -76,7 +79,8 @@ class GameDevCrew:
         crew = Crew(
             agents=[designer, developer, reviewer],
             tasks=[design_task, impl_task, review_task],
-            process=Process.sequential,
+            process=Process.hierarchical,
+            manager_agent=manager,
             verbose=True,
             memory=False,
         )
@@ -88,6 +92,7 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_content(self, request: str) -> str:
+        manager = project_manager()
         writer = storyteller()
         developer = game_developer()
         reviewer = code_reviewer()
@@ -101,7 +106,8 @@ class GameDevCrew:
         crew = Crew(
             agents=[writer, developer, reviewer],
             tasks=[content_task, impl_task, review_task],
-            process=Process.sequential,
+            process=Process.hierarchical,
+            manager_agent=manager,
             verbose=True,
         )
         result = crew.kickoff()
@@ -112,6 +118,7 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_review(self) -> str:
+        manager = project_manager()
         reviewer = code_reviewer()
         developer = game_developer()
 
@@ -122,7 +129,8 @@ class GameDevCrew:
         crew = Crew(
             agents=[reviewer, developer],
             tasks=[review_task, fix_task],
-            process=Process.sequential,
+            process=Process.hierarchical,
+            manager_agent=manager,
             verbose=True,
         )
         result = crew.kickoff()
@@ -133,6 +141,7 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_ui(self, request: str) -> str:
+        manager = project_manager()
         designer = ui_designer()
         developer = ui_developer()
 
@@ -143,7 +152,8 @@ class GameDevCrew:
         crew = Crew(
             agents=[designer, developer],
             tasks=[design_task, impl_task],
-            process=Process.sequential,
+            process=Process.hierarchical,
+            manager_agent=manager,
             verbose=True,
             memory=False,
         )

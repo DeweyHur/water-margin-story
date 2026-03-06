@@ -248,12 +248,16 @@ def bug_fix_task(bug_report: str, tester: Agent) -> Task:
 def design_ui_task(ui_request: str, designer: Agent) -> Task:
     return Task(
         description=(
-            f"UI 관련 파일({_UI_FILES})을 read_project_file로 읽어라.\n"
-            "읽은 후 아래 UI 요청에 대한 설계 내용을 "
-            "write_project_file로 /tmp/wm_ui_design.md 에 저장하라.\n"
-            "설계 내용에 코드 예시가 있으면 코드 블록 대신 인덱팅된 일반 텍스트로 작성하라.\n\n"
-            f"UI 요청: {ui_request}\n\n"
-            "설계 내용: 변경할 메서드 목록, 사용할 라이브러리, 게임 로직 변경 없음 확인."
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
+            "2. read_project_file 호출: file_path='game/engine.py'\n"
+            "3. read_project_file 호출: file_path='models/game_state.py'\n"
+            "4. read_project_file 호출: file_path='models/hero.py'\n"
+            "5. read_project_file 호출: file_path='models/town.py'\n"
+            "6. write_project_file 호출: file_path='/tmp/wm_ui_design.md', "
+            "content=설계 문서(변경할 메서드 목록, 사용할 라이브러리, 게임 로직 변경 없음 확인, "
+            "코드 예시는 인덴트된 일반 텍스트로 — 백틱 코드블록 사용 금지)\n\n"
+            f"UI 요청: {ui_request}"
         ),
         expected_output="/tmp/wm_ui_design.md 저장 완료 확인.",
         agent=designer,
@@ -263,14 +267,17 @@ def design_ui_task(ui_request: str, designer: Agent) -> Task:
 def implement_ui_task(ui_request: str, developer: Agent) -> Task:
     return Task(
         description=(
-            "단계별로 도구를 호출하라 — 코드를 텍스트로 출력하지 말 것.\n\n"
-            "1. read_project_file('/tmp/wm_ui_design.md') 호출\n"
-            "2. read_project_file('ui/terminal_ui.py') 호출\n"
-            "3. 수정된 ui/terminal_ui.py 전체 내용을 write_project_file로 저장\n"
-            "4. python_runner 호출: code='from ui.terminal_ui import TerminalUI; print(\"OK\")'\n\n"
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. read_project_file 호출: file_path='/tmp/wm_ui_design.md'\n"
+            "2. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
+            "3. write_project_file 호출: file_path='ui/terminal_ui.py', "
+            "content=수정된 전체 파일 내용\n"
+            "4. python_runner 호출: "
+            "code='from ui.terminal_ui import TerminalUI; print(\"IMPORT_OK\")'\n\n"
             f"UI 요청: {ui_request}\n\n"
-            "제약: game/, models/, config/ 파일은 절대 수정하지 않는다."
+            "제약: game/, models/, config/ 파일 수정 금지. "
+            "코드를 텍스트로 출력하지 말 것 — 반드시 write_project_file로 저장할 것."
         ),
-        expected_output="write_project_file 저장 완료 확인, python_runner 결과(OK 또는 에러).",
+        expected_output="python_runner 실행 결과 'IMPORT_OK' 포함 여부.",
         agent=developer,
     )

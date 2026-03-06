@@ -3,13 +3,38 @@ from __future__ import annotations
 
 from crewai import Agent
 
-from config.llm_config import get_design_llm, get_code_llm, get_review_llm, get_groq_tool_llm
+from config.llm_config import (
+    get_design_llm, get_code_llm, get_review_llm,
+    get_groq_tool_llm, get_manager_llm, get_gemini_flash_llm,
+)
 from tools.python_runner_tool import PythonRunnerTool
 from tools.file_tools import SimpleFileReadTool, SimpleFileWriteTool
 
 _python_runner = PythonRunnerTool()
 _file_read = SimpleFileReadTool()
 _file_write = SimpleFileWriteTool()
+
+
+def project_manager() -> Agent:
+    """수석 매니저 — 70B 요사, 위임·검수 전담. 도구 없음, 위임만."""
+    return Agent(
+        role="수석 프로젝트 매니저",
+        goal=(
+            "디렉터의 요청을 파악하고 하위 에이전트에게 업무를 배분한다. "
+            "최종 결과물이 디렉터의 의도를 100% 이행했는지 확인 후 승인한다. "
+            "조금이라도 누락되면 반려하고 수정을 요청한다."
+        ),
+        backstory=(
+            "완벽주의자 수석 매니저로, 비서실장어를 출걸한 듯한 지휘 능력을 갖춤다. "
+            "Water Margin Story 코드베이스와 제코마역할을 깊이 이해하며 "
+            "응답이 요구사항을 충족하지 못하면 절대 주그리지 않는다."
+        ),
+        tools=[],
+        llm=get_manager_llm(),
+        verbose=True,
+        allow_delegation=True,
+        max_iter=6,
+    )
 
 
 def game_designer() -> Agent:
@@ -93,7 +118,7 @@ def code_reviewer() -> Agent:
             "실용성을 중시하여 구체적인 수정 코드를 제안한다."
         ),
         tools=[_file_read, _file_write],
-        llm=get_review_llm(),
+        llm=get_gemini_flash_llm(temperature=0.1),
         verbose=True,
         allow_delegation=False,
         max_iter=4,
@@ -116,7 +141,7 @@ def game_tester() -> Agent:
             "재현 가능한 최소 코드 스니펫을 만들어 개발자에게 넘긴다."
         ),
         tools=[_file_read, _python_runner],
-        llm=get_review_llm(),
+        llm=get_gemini_flash_llm(temperature=0.1),
         verbose=True,
         allow_delegation=False,
         max_iter=8,
