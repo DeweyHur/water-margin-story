@@ -65,22 +65,19 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_feature(self, request: str) -> str:
-        designer = game_designer()
         developer = game_developer()
 
-        design_task = design_feature_task(request, designer)
         impl_task = implement_feature_task(request, developer)
-        impl_task.context = [design_task]
 
-        # Phase 1: design → implement (sequential — 순서가 절대 바뀌면 안 됨)
+        # Phase 1: implement (sequential — 파일 읽기 → 수정 → 검증)
         build_crew = Crew(
-            agents=[designer, developer],
-            tasks=[design_task, impl_task],
+            agents=[developer],
+            tasks=[impl_task],
             process=Process.sequential,
             verbose=True,
             memory=False,
         )
-        build_result = build_crew.kickoff()
+        build_crew.kickoff()
 
         # Phase 2: manager가 구현 결과물을 검수 → 미흡하면 개발자에게 반려
         manager = project_manager()
@@ -99,8 +96,7 @@ class GameDevCrew:
             verbose=True,
             memory=False,
         )
-        review_result = review_crew.kickoff()
-        return str(review_result)
+        return str(review_crew.kickoff())
 
     # ------------------------------------------------------------------
     # Content generation: storyteller → developer → reviewer

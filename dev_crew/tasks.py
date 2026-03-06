@@ -40,22 +40,24 @@ def design_feature_task(feature_request: str, designer: Agent) -> Task:
 
 
 def implement_feature_task(feature_request: str, developer: Agent) -> Task:
+    """설계+구현 통합 태스크 - 파일 직접 읽고 수정."""
     return Task(
         description=(
-            "파일 1개씩 순서대로 처리하라. 여러 파일을 동시에 수정하지 말 것.\n\n"
-            "1. read_project_file 호출: file_path='/tmp/wm_design.md'\n"
-            "2. 설계에서 첫 번째 수정 파일을 확인한다\n"
-            "3. read_project_file 호출: 첫 번째 파일 읽기\n"
-            "4. write_project_file 호출: 코드 수정 후 저장\n"
-            "5. python_runner 호출: 저장한 모듈 import 검증\n"
-            "   code='import sys; sys.path.insert(0,\".\"); "
+            "파일을 1개씩 순서대로 읽고 수정하라.\n\n"
+            "1. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
+            "2. read_project_file 호출: file_path='game/engine.py'\n"
+            "3. read_project_file 호출: file_path='models/game_state.py'\n"
+            "4. 기능 요청에 맞게 수정할 파일을 1개 선택\n"
+            "5. write_project_file 호출: 해당 파일 저장\n"
+            "6. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
             "from ui.terminal_ui import TerminalUI; "
             "from models.game_state import GameState; print(\"VERIFY_OK\")'\n"
-            "6. 설계에 다음 파일이 있으면 3-5를 반복\n\n"
-            f"구현 대상: {feature_request}\n\n"
-            "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2 BaseModel, "
+            "7. 수정할 파일이 더 있으면 5-6 반복\n\n"
+            f"기능 요청: {feature_request}\n\n"
+            "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
             "from __future__ import annotations, 기존 import 절대 제거 금지. "
-            "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
+            "코드를 텍스트로 출력하지 말 것."
         ),
         expected_output="python_runner 결과 'VERIFY_OK' 포함 여부.",
         agent=developer,
