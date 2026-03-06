@@ -274,6 +274,34 @@ SMOKE_TESTS = [
         "    tm.ai_turn(hero)\n"
         "print('PASS')",
     ),
+    (
+        "테스트7_지도렌더링",
+        "import yaml, pathlib\n"
+        "from io import StringIO\n"
+        "from rich.console import Console\n"
+        "from models.game_state import GameState\n"
+        "from models.hero import Hero\n"
+        "from models.town import Town\n"
+        "from models.faction import Faction\n"
+        "from ui.terminal_ui import TerminalUI\n"
+        "gs = GameState()\n"
+        "towns_data = yaml.safe_load(pathlib.Path('config/towns.yaml').read_text())\n"
+        "for t in towns_data['towns']:\n"
+        "    gs.towns[t['id']] = Town(**t)\n"
+        "heroes_data = yaml.safe_load(pathlib.Path('config/heroes.yaml').read_text())\n"
+        "factions_data = yaml.safe_load(pathlib.Path('config/factions.yaml').read_text())\n"
+        "for f in factions_data['factions']:\n"
+        "    gs.factions[f['id']] = Faction(**f)\n"
+        "first = heroes_data['heroes'][0]\n"
+        "gs.heroes[first['id']] = Hero(**first)\n"
+        "hero = gs.heroes[first['id']]\n"
+        "ui = TerminalUI()\n"
+        "buf = StringIO()\n"
+        "ui.console = Console(file=buf, highlight=False)\n"
+        "ui._render_static_map(gs, hero.current_town)\n"
+        "assert len(buf.getvalue()) > 0, '지도 출력 없음'\n"
+        "print('PASS')",
+    ),
 ]
 
 

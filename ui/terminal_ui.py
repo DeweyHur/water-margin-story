@@ -153,11 +153,11 @@ class TerminalUI:
                     short = self._SHORT.get(tid, tid[:2])
                     t = town_by_id[tid]
                     if tid == hero_current_town_id:
-                        style = "bold fg:ansiblack bg:ansiyellow"
+                        style = "bold black on yellow"
                     elif t.controlled_by_faction == "liangshan":
-                        style = "fg:ansibrightgreen"
+                        style = "bright_green"
                     else:
-                        style = "fg:ansibrightred"
+                        style = "bright_red"
                     line_parts.append((style, f"[{short}]"))
                     line_parts.append(("", "  "))        # 2-col separator
             for style, text in line_parts:

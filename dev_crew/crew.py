@@ -17,6 +17,7 @@ from dev_crew.tasks import (
     implement_feature_task,
     generate_content_task,
     review_code_task,
+    review_feature_task,
     developer_fix_from_tester_task,
     developer_fix_from_review_task,
     developer_implement_for_content_task,
@@ -79,24 +80,26 @@ class GameDevCrew:
         )
         build_crew.kickoff()
 
-        # Phase 2: manager가 구현 결과물을 검수 → 미흡하면 개발자에게 반려
-        manager = project_manager()
+        # Phase 2: feature-aware review → 구현 누락이면 개발자가 반드시 추가
+        # sequential 사용: manager가 태스크를 건너뛰는 것을 방지
         reviewer = code_reviewer()
         review_developer = game_developer()
 
-        review_task = review_code_task(reviewer)
+        review_task = review_feature_task(request, reviewer)
         fix_task = developer_fix_from_review_task(review_developer)
         fix_task.context = [review_task]
 
         review_crew = Crew(
             agents=[reviewer, review_developer],
             tasks=[review_task, fix_task],
-            process=Process.hierarchical,
-            manager_agent=manager,
+            process=Process.sequential,
             verbose=True,
             memory=False,
         )
-        return str(review_crew.kickoff())
+        review_crew.kickoff()
+
+        # Phase 3: smoke test — 실패 항목이 있으면 에이전트가 자동 수정
+        return self._run_smoke_phase()
 
     # ------------------------------------------------------------------
     # Content generation: storyteller → developer → reviewer
@@ -175,7 +178,8 @@ class GameDevCrew:
     # Smoke test: run tests in Python directly, agent only fixes failures
     # ------------------------------------------------------------------
 
-    def _run_test(self) -> str:
+    def _run_smoke_phase(self) -> str:
+        """스모크 테스트 실행 → 실패 항목만 에이전트가 수정."""
         _PYTHON = str(Path(__file__).parent.parent / ".venv" / "bin" / "python")
         if not Path(_PYTHON).exists():
             _PYTHON = sys.executable
@@ -220,3 +224,6 @@ class GameDevCrew:
         )
         result = crew.kickoff()
         return str(result)
+
+    def _run_test(self) -> str:
+        return self._run_smoke_phase()
