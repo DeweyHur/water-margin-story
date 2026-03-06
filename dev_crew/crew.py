@@ -65,27 +65,42 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_feature(self, request: str) -> str:
-        manager = project_manager()
         designer = game_designer()
         developer = game_developer()
-        reviewer = code_reviewer()
 
         design_task = design_feature_task(request, designer)
         impl_task = implement_feature_task(request, developer)
         impl_task.context = [design_task]
-        review_task = review_code_task(reviewer)
-        review_task.context = [impl_task]
 
-        crew = Crew(
-            agents=[designer, developer, reviewer],
-            tasks=[design_task, impl_task, review_task],
+        # Phase 1: design → implement (sequential — 순서가 절대 바뀌면 안 됨)
+        build_crew = Crew(
+            agents=[designer, developer],
+            tasks=[design_task, impl_task],
+            process=Process.sequential,
+            verbose=True,
+            memory=False,
+        )
+        build_result = build_crew.kickoff()
+
+        # Phase 2: manager가 구현 결과물을 검수 → 미흡하면 개발자에게 반려
+        manager = project_manager()
+        reviewer = code_reviewer()
+        review_developer = game_developer()
+
+        review_task = review_code_task(reviewer)
+        fix_task = developer_fix_from_review_task(review_developer)
+        fix_task.context = [review_task]
+
+        review_crew = Crew(
+            agents=[reviewer, review_developer],
+            tasks=[review_task, fix_task],
             process=Process.hierarchical,
             manager_agent=manager,
             verbose=True,
             memory=False,
         )
-        result = crew.kickoff()
-        return str(result)
+        review_result = review_crew.kickoff()
+        return str(review_result)
 
     # ------------------------------------------------------------------
     # Content generation: storyteller → developer → reviewer
