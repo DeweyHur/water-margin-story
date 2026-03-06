@@ -86,8 +86,8 @@ class TerminalUI:
         self.console.print(
             f"\n[bold cyan]{hero.name_ko}[/] "
             f"(위치: {town.name_ko}, 병력: {hero.current_army},"
-            f" AP: {hero.action_points}")
-        )
+            f" AP: {hero.action_points})")
+
         choices = [
             ("move",        "이동       — 인접 지역으로 이동"),
             ("investigate", "조사       — 현재 마을 탐문"),
@@ -143,4 +143,3 @@ class TerminalUI:
             self.console.print(Panel.fit(
                 "[bold red]송나라가 멸망하고 중원이 혼란에 빠졌습니다...[/]", title="패배"
             ))
-
