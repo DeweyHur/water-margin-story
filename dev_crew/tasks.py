@@ -33,13 +33,19 @@ def design_feature_task(feature_request: str, designer: Agent) -> Task:
 def implement_feature_task(feature_request: str, developer: Agent) -> Task:
     return Task(
         description=(
-            f"관련 파일({_FILES}) 중 필요한 것을 read_project_file로 읽어라.\n"
-            f"읽은 후 아래 기능을 구현하고 write_project_file로 저장하라.\n\n"
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            f"1. read_project_file 호출: 설계 문서(/tmp/wm_design.md) 읽기\n"
+            f"2. read_project_file 호출: 수정할 파일 읽기\n"
+            "3. write_project_file 호출: 수정된 파일 저장\n"
+            "4. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
+            "import models; import game; print(\"VERIFY_OK\")'\n\n"
             f"구현 대상: {feature_request}\n\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2 BaseModel, "
-            "from __future__ import annotations, 기존 import 경로 유지."
+            "from __future__ import annotations, 기존 import 경로 유지. "
+            "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
         ),
-        expected_output="생성/수정된 파일 목록과 각 파일의 변경 사항 요약.",
+        expected_output="python_runner 결과 'VERIFY_OK' 포함 여부.",
         agent=developer,
     )
 
@@ -47,12 +53,16 @@ def implement_feature_task(feature_request: str, developer: Agent) -> Task:
 def generate_content_task(content_request: str, storyteller: Agent) -> Task:
     return Task(
         description=(
-            "read_project_file로 config/events.yaml, config/heroes.yaml, config/towns.yaml을 읽어라.\n"
-            f"읽은 후 아래 컨텐츠를 동일한 YAML 포맷으로 작성하고 write_project_file로 저장하라.\n\n"
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. read_project_file 호출: file_path='config/events.yaml'\n"
+            "2. read_project_file 호출: file_path='config/heroes.yaml'\n"
+            "3. read_project_file 호출: file_path='config/towns.yaml'\n"
+            "4. write_project_file 호출: 동일한 YAML 포맷으로 컨텐츠 추가 저장\n\n"
             f"컨텐츠 요청: {content_request}\n\n"
-            "수호지 세계관, 한국어, 게임 밸런스를 유지하라."
+            "수호지 세계관, 한국어, 게임 밸런스를 유지하라. "
+            "YAML을 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
         ),
-        expected_output="YAML 형식 게임 컨텐츠. 저장된 파일 경로 포함.",
+        expected_output="write_project_file 저장 완료 확인.",
         agent=storyteller,
     )
 
@@ -60,12 +70,18 @@ def generate_content_task(content_request: str, storyteller: Agent) -> Task:
 def developer_fix_from_tester_task(developer: Agent) -> Task:
     return Task(
         description=(
-            "앞선 QA 테스터 보고서를 보고, 지목된 파일을 read_project_file로 읽어라.\n"
-            "읽은 후 최소 변경으로 버그를 수정하고 write_project_file로 저장하라.\n\n"
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. 앞선 QA 테스터 보고서에서 수정할 파일을 파악한다\n"
+            "2. read_project_file 호출: 해당 파일 읽기\n"
+            "3. write_project_file 호출: 최소 변경으로 버그 수정 후 저장\n"
+            "4. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
+            "import models; import game; print(\"FIX_OK\")'\n\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
-            "from __future__ import annotations."
+            "from __future__ import annotations. "
+            "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
         ),
-        expected_output="수정된 파일 목록, 변경 내용, 수정 근거.",
+        expected_output="python_runner 결과 'FIX_OK' 포함 여부.",
         agent=developer,
     )
 
@@ -73,12 +89,17 @@ def developer_fix_from_tester_task(developer: Agent) -> Task:
 def developer_fix_from_review_task(developer: Agent) -> Task:
     return Task(
         description=(
-            "read_project_file로 /tmp/wm_review.md를 읽어 리뷰 내용을 확인하라.\n"
-            "지적된 파일을 read_project_file로 읽고, 모든 지적 사항을 수정한 뒤 "
-            "write_project_file로 저장하라.\n\n"
-            "품질 점수 7점 미만이면 전면 개선, 7점 이상이면 지적 항목만 수정."
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. read_project_file 호출: file_path='/tmp/wm_review.md'\n"
+            "2. read_project_file 호출: 리뷰에서 지목된 파일 읽기\n"
+            "3. write_project_file 호출: 지적 사항 수정 후 저장\n"
+            "4. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
+            "import models; import game; print(\"FIX_OK\")'\n\n"
+            "품질 점수 7점 미만이면 전면 개선, 7점 이상이면 지적 항목만 수정. "
+            "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
         ),
-        expected_output="지적 항목별 처리 결과(수정/미수정 이유), 수정된 파일 목록.",
+        expected_output="python_runner 결과 'FIX_OK' 포함 여부.",
         agent=developer,
     )
 
@@ -86,12 +107,17 @@ def developer_fix_from_review_task(developer: Agent) -> Task:
 def developer_implement_for_content_task(developer: Agent) -> Task:
     return Task(
         description=(
-            f"관련 파일({_FILES})을 read_project_file로 읽어라.\n"
-            "앞선 스토리텔러 컨텐츠가 참조하는 기능/필드/EventType이 코드에 없으면 "
-            "최소한으로 구현하고 write_project_file로 저장하라.\n"
-            "없는 것이 없으면 '누락 없음'으로 보고하고 종료하라."
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            f"1. read_project_file 호출: 관련 파일({_FILES}) 중 필요한 것 읽기\n"
+            "2. 앞선 스토리텔러 컨텐츠가 참조하는 기능/필드/EventType이 코드에 없으면 구현\n"
+            "3. (수정 있을 때만) write_project_file 호출: 최소 변경으로 저장\n"
+            "4. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
+            "import models; import game; print(\"VERIFY_OK\")'\n\n"
+            "없는 것이 없으면 4번(python_runner)만 실행하라. "
+            "코드를 텍스트로 출력하지 말 것."
         ),
-        expected_output="새로 구현한 기능 목록(없으면 '없음'), 수정된 파일 목록.",
+        expected_output="python_runner 결과 'VERIFY_OK' 포함 여부.",
         agent=developer,
     )
 
@@ -224,14 +250,19 @@ def make_fix_from_failures_task(failure_report: str, developer: Agent) -> Task:
     """스모크 테스트 실패 결과를 받아 개발자가 수정하는 태스크."""
     return Task(
         description=(
-            "아래 스모크 테스트 실패 보고서를 확인하라.\n"
-            "지목된 파일을 read_project_file로 읽고, 최소 변경으로 버그를 수정한 뒤 "
-            "write_project_file로 저장하라.\n\n"
+            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. 실패 보고서를 분석하여 수정할 파일을 파악한다\n"
+            "2. read_project_file 호출: 해당 파일 읽기\n"
+            "3. write_project_file 호출: 최소 변경으로 버그 수정 후 저장\n"
+            "4. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
+            "<수정한 모듈> import; print(\"FIX_OK\")'\n\n"
             f"실패 보고서:\n{failure_report}\n\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
-            "from __future__ import annotations."
+            "from __future__ import annotations. "
+            "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
         ),
-        expected_output="수정된 파일 목록, 각 파일의 변경 내용 요약.",
+        expected_output="python_runner 결과 'FIX_OK' 포함 여부.",
         agent=developer,
     )
 
