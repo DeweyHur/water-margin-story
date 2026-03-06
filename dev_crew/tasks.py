@@ -25,12 +25,14 @@ def design_feature_task(feature_request: str, designer: Agent) -> Task:
             "2. read_project_file 호출: file_path='game/engine.py'\n"
             "3. read_project_file 호출: file_path='models/game_state.py'\n"
             "4. write_project_file 호출: file_path='/tmp/wm_design.md'\n"
-            "   내용에 다음을 반드시 포함할 것 (코드 블록 금지, 인덴트 텍스트로)::\n"
-            "   - 바꿼 파일 목록 (정확한 경로)\n"
-            "   - 각 파일별: 추가/수정할 함수멝, 시그니처, 왕늘리는 코드 스니펫 (2-5줄)\n"
-            "   - 새 Pydantic 필드가 있으면 필드명과 타입\n"
-            "   - 구현 순서 (어떤 파일을 먼저 고친다)\n\n"
-            f"기능 요청: {feature_request}"
+            "   content는 아래 형식의 순수 텍스트 (마크다운 금지, 백틱 금지, '#' 금지):\n"
+            "   수정파일: ui/terminal_ui.py\n"
+            "   추가함수: show_map(game_state)\n"
+            "   수정파일: models/game_state.py\n"
+            "   추가필드: map_cursor_pos str\n"
+            "   순서: game_state -> engine -> terminal_ui\n\n"
+            f"기능 요청: {feature_request}\n\n"
+            "주의: 코드 스니펫 절대 금지. 함수명과 파라미터 이름만 나열."
         ),
         expected_output="/tmp/wm_design.md 저장 완료 확인.",
         agent=designer,
