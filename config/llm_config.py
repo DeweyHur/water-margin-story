@@ -60,13 +60,18 @@ def get_design_llm() -> LLM:
 
 
 def get_code_llm() -> LLM:
-    """코드 생성 — Gemini 2.5 Flash. 65K output 토큰, tool calling 지원."""
-    return get_gemini_flash_llm(temperature=0.1)
+    """코드 생성 — Llama 4 Scout, tool calling 고성능. write 4000자 제한으로 8192 토큰 충분."""
+    return get_groq_tool_llm(temperature=0.1, max_tokens=8192)
 
 
 def get_review_llm() -> LLM:
-    """코드 검수 — Gemini Flash. 컨텍스트 이해·문서 분석 강점. FileReadTool 사용."""
-    return get_gemini_flash_llm(temperature=0.1)
+    """코드 검수 — Llama 3.3 70B Versatile, 32768 output 토큰, 긴 컨텍스트 분석."""
+    return LLM(
+        model="groq/llama-3.3-70b-versatile",
+        api_key=_GROQ_KEY,
+        temperature=0.1,
+        max_tokens=8192,
+    )
 
 
 def get_game_llm() -> LLM:

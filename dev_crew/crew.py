@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import subprocess
 import sys
-import time
 from enum import Enum
 from pathlib import Path
 
@@ -49,20 +48,6 @@ class GameDevCrew:
         result = crew.run(mode=DevMode.REVIEW)
     """
 
-    # Gemini free-tier RPM 제한 대응 — 단계 사이 쿨다운
-    _GEMINI_COOLDOWN_SEC: int = 65
-
-    @staticmethod
-    def _gemini_cooldown(label: str = "") -> None:
-        """Gemini RPM 쿼터 소진 방지: 다음 단계 전 대기."""
-        secs = GameDevCrew._GEMINI_COOLDOWN_SEC
-        tag = f" ({label})" if label else ""
-        print(f"  ⏳ Gemini 쿨다운{tag}: {secs}초 대기 중...", flush=True)
-        for remaining in range(secs, 0, -5):
-            time.sleep(5)
-            print(f"     {remaining - 5}초 남음...", flush=True)
-        print("  ✅ 쿨다운 완료.", flush=True)
-
     def run(self, request: str = "", mode: DevMode = DevMode.FEATURE) -> str:
         if mode == DevMode.FEATURE:
             return self._run_feature(request)
@@ -95,8 +80,6 @@ class GameDevCrew:
         )
         build_crew.kickoff()
 
-        self._gemini_cooldown("Phase1→2")
-
         # Phase 2: feature-aware review → 구현 누락이면 개발자가 반드시 추가
         # sequential 사용: manager가 태스크를 건너뛰는 것을 방지
         reviewer = code_reviewer()
@@ -114,8 +97,6 @@ class GameDevCrew:
             memory=False,
         )
         review_crew.kickoff()
-
-        self._gemini_cooldown("Phase2→3")
 
         # Phase 3: smoke test — 실패 항목이 있으면 에이전트가 자동 수정
         return self._run_smoke_phase()
