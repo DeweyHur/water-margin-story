@@ -22,7 +22,6 @@ class PythonRunnerInput(BaseModel):
             "버그를 재현하려면 실제 오류가 발생하는 코드 경로를 그대로 호출하라."
         )
     )
-    timeout: int = Field(default=30, description="최대 실행 시간(초). 기본값 30.")
 
 
 class PythonRunnerTool(BaseTool):
@@ -30,12 +29,13 @@ class PythonRunnerTool(BaseTool):
     description: str = (
         "실제 Python 코드를 프로젝트 환경에서 실행하고 stdout/stderr/traceback을 반환한다. "
         "버그 재현, 모듈 import 확인, 게임 로직 단위 실행에 사용한다. "
-        "입력: code(실행할 Python 코드 문자열), timeout(초, 선택). "
+        "입력: code(실행할 Python 코드 문자열). "
         "출력: 실행 결과 또는 예외 메시지."
     )
     args_schema: type[BaseModel] = PythonRunnerInput
 
-    def _run(self, code: str, timeout: int = 30) -> str:
+    def _run(self, code: str) -> str:
+        timeout = 30
         # 들여쓰기 정규화
         code = textwrap.dedent(code)
 
