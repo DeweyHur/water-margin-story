@@ -53,15 +53,25 @@ class SimpleFileReadTool(BaseTool):
             return f"ERROR reading {file_path}: {e}"
 
 
+_MAX_WRITE_CHARS = 4000  # Groq output token 한도 초과 방지
+
+
 class SimpleFileWriteTool(BaseTool):
     name: str = "write_project_file"
     description: str = (
-        "파일 전체를 새로 저장한다. 新규 파일이나 짧은 파일에 사용. "
-        "큰 파일의 일부 함수·클래스만 수정할 때는 patch_project_file을 사용할 것."
+        "새 파일 생성 또는 짧은 파일 전체 저장 전용 (4000자 이하). "
+        "기존 파일의 함수·클래스 교체는 반드시 patch_project_file 사용. "
+        "200줄 이상 파일은 patch_project_file로 특정 함수만 교체할 것."
     )
     args_schema: type[BaseModel] = _WriteInput
 
     def _run(self, file_path: str, content: str) -> str:
+        if len(content) > _MAX_WRITE_CHARS:
+            return (
+                f"ERROR: content too large ({len(content)} chars > {_MAX_WRITE_CHARS} limit). "
+                "Use patch_project_file to replace only the changed function/class block. "
+                "Read the file first, then patch only the specific function that needs to change."
+            )
         path = _resolve(file_path)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)

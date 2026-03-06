@@ -60,8 +60,8 @@ def get_design_llm() -> LLM:
 
 
 def get_code_llm() -> LLM:
-    """코드 생성 — FileWriterTool·python_runner 사용, Llama 4 Scout tool calling."""
-    return get_groq_tool_llm(temperature=0.1, max_tokens=8192)
+    """코드 생성 — Gemini 2.5 Flash. 65K output 토큰, tool calling 지원."""
+    return get_gemini_flash_llm(temperature=0.1)
 
 
 def get_review_llm() -> LLM:
