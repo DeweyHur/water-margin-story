@@ -20,12 +20,19 @@ _UI_FILES = (
 def design_feature_task(feature_request: str, designer: Agent) -> Task:
     return Task(
         description=(
-            f"1. read_project_file로 관련 파일({_FILES}) 중 필요한 것을 읽어라.\n"
-            f"2. 읽은 후 설계 문서를 작성하고 write_project_file로 /tmp/wm_design.md 에 저장하라.\n\n"
-            f"기능 요청: {feature_request}\n\n"
-            "설계 문서 포함 내용: 기능 개요, 영향받는 파일, 새 모델/필드, 구현 순서."
+            "도구를 한 번에 하나씩 순서대로 호출하라.\n\n"
+            "1. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
+            "2. read_project_file 호출: file_path='game/engine.py'\n"
+            "3. read_project_file 호출: file_path='models/game_state.py'\n"
+            "4. write_project_file 호출: file_path='/tmp/wm_design.md'\n"
+            "   내용에 다음을 반드시 포함할 것 (코드 블록 금지, 인덴트 텍스트로)::\n"
+            "   - 바꿼 파일 목록 (정확한 경로)\n"
+            "   - 각 파일별: 추가/수정할 함수멝, 시그니처, 왕늘리는 코드 스니펫 (2-5줄)\n"
+            "   - 새 Pydantic 필드가 있으면 필드명과 타입\n"
+            "   - 구현 순서 (어떤 파일을 먼저 고친다)\n\n"
+            f"기능 요청: {feature_request}"
         ),
-        expected_output="/tmp/wm_design.md 저장 완료 확인. 영향받는 파일 목록 포함.",
+        expected_output="/tmp/wm_design.md 저장 완료 확인.",
         agent=designer,
     )
 
@@ -33,16 +40,19 @@ def design_feature_task(feature_request: str, designer: Agent) -> Task:
 def implement_feature_task(feature_request: str, developer: Agent) -> Task:
     return Task(
         description=(
-            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
-            f"1. read_project_file 호출: 설계 문서(/tmp/wm_design.md) 읽기\n"
-            f"2. read_project_file 호출: 수정할 파일 읽기\n"
-            "3. write_project_file 호출: 수정된 파일 저장\n"
-            "4. python_runner 호출: "
-            "code='import sys; sys.path.insert(0,\".\"); "
-            "import models; import game; print(\"VERIFY_OK\")'\n\n"
+            "파일 1개씩 순서대로 처리하라. 여러 파일을 동시에 수정하지 말 것.\n\n"
+            "1. read_project_file 호출: file_path='/tmp/wm_design.md'\n"
+            "2. 설계에서 첫 번째 수정 파일을 확인한다\n"
+            "3. read_project_file 호출: 첫 번째 파일 읽기\n"
+            "4. write_project_file 호출: 코드 수정 후 저장\n"
+            "5. python_runner 호출: 저장한 모듈 import 검증\n"
+            "   code='import sys; sys.path.insert(0,\".\"); "
+            "from ui.terminal_ui import TerminalUI; "
+            "from models.game_state import GameState; print(\"VERIFY_OK\")'\n"
+            "6. 설계에 다음 파일이 있으면 3-5를 반복\n\n"
             f"구현 대상: {feature_request}\n\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2 BaseModel, "
-            "from __future__ import annotations, 기존 import 경로 유지. "
+            "from __future__ import annotations, 기존 import 절대 제거 금지. "
             "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
         ),
         expected_output="python_runner 결과 'VERIFY_OK' 포함 여부.",

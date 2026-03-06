@@ -77,7 +77,7 @@ def game_developer() -> Agent:
         llm=get_code_llm(),
         verbose=True,
         allow_delegation=False,
-        max_iter=8,
+        max_iter=15,
     )
 
 
