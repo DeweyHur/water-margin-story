@@ -57,6 +57,8 @@ def implement_feature_task(feature_request: str, developer: Agent) -> Task:
             f"기능 요청: {feature_request}\n\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
             "from __future__ import annotations, 기존 import 절대 제거 금지. "
+            "기존 함수·클래스·메서드 절대 삭제 금지 — 새 코드만 추가하라. "
+            "파일 전체를 새로 작성하지 말 것 — 기존 파일에 필요한 부분만 추가·수정. "
             "코드를 텍스트로 출력하지 말 것."
         ),
         expected_output="python_runner 결과 'VERIFY_OK' 포함 여부.",

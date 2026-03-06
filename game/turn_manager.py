@@ -38,6 +38,8 @@ class TurnManager:
             elif action == "rest":
                 self._do_rest(hero)
                 hero.action_points -= 1
+            elif action == "map":
+                ui.show_map(self.state)   # AP 소모 없음
             elif action == "end":
                 hero.action_points = 0
                 break

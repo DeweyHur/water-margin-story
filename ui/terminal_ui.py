@@ -3,6 +3,11 @@ from __future__ import annotations
 from typing import Optional
 
 import questionary
+from prompt_toolkit import Application
+from prompt_toolkit.key_binding import KeyBindings
+from prompt_toolkit.layout import Layout
+from prompt_toolkit.layout.containers import VSplit, Window, HSplit
+from prompt_toolkit.layout.controls import FormattedTextControl
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
@@ -94,6 +99,7 @@ class TerminalUI:
             ("recruit",     "모병       — 병력 충원"),
             ("siege",       "공성       — 마을 점령 시도"),
             ("rest",        "휴식       — AP 회복"),
+            ("map",         "지도       — 거점 정보 확인 (AP 소모 없음)"),
             ("end",         "턴 종료    — 다음 턴으로"),
         ]
         ids = [c[0] for c in choices]
@@ -143,3 +149,116 @@ class TerminalUI:
             self.console.print(Panel.fit(
                 "[bold red]송나라가 멸망하고 중원이 혼란에 빠졌습니다...[/]", title="패배"
             ))
+
+    # ------------------------------------------------------------------
+    # Interactive map (prompt_toolkit full-screen cursor navigation)
+    # ------------------------------------------------------------------
+
+    def show_map(self, state: GameState) -> Optional[str]:
+        """Full-screen cursor-navigable map.
+
+        ↑↓ arrows move the cursor between towns.
+        Enter selects the highlighted town and returns its id.
+        Escape / q returns None (cancel).
+        """
+        _TYPE_ICON = {"village": "마을", "fortress": "요새", "metropolis": "대도시"}
+        towns = list(state.towns.values())
+        cursor = [0]
+        result: list[Optional[str]] = [None]
+
+        # ---- renderers -----------------------------------------------
+
+        def left_text():
+            lines: list[tuple[str, str]] = []
+            lines.append(("bold underline", " 거점 목록\n"))
+            lines.append(("", "─" * 28 + "\n"))
+            for i, town in enumerate(towns):
+                faction = state.factions.get(town.controlled_by_faction)
+                faction_name = faction.name_ko[:4] if faction else "중립"
+                if i == cursor[0]:
+                    lines.append(("bold fg:ansiyellow reverse", f" ▶ {town.name_ko:<8} {faction_name}\n"))
+                else:
+                    lines.append(("", f"   {town.name_ko:<8} {faction_name}\n"))
+            lines.append(("", "\n"))
+            lines.append(("fg:ansibrightblack", " ↑↓이동  Enter선택  q취소"))
+            return lines
+
+        def right_text():
+            town = towns[cursor[0]]
+            faction = state.factions.get(town.controlled_by_faction)
+            faction_name = faction.name_ko if faction else "중립"
+            adj_names = [
+                state.towns[a].name_ko
+                for a in town.adjacent
+                if a in state.towns
+            ]
+            type_label = _TYPE_ICON.get(town.town_type, town.town_type)
+            wall_bar = "█" * int(town.wall_integrity() * 10) + "░" * (10 - int(town.wall_integrity() * 10))
+            lines: list[tuple[str, str]] = [
+                ("bold underline", f" {town.name_ko}  {town.name_zh}\n"),
+                ("", "─" * 36 + "\n"),
+                ("", f" 유형  : {type_label}\n"),
+                ("", f" 세력  : {faction_name}\n"),
+                ("", f" 방어  : {'★' * town.defense_level}{'☆' * (10 - town.defense_level)}\n"),
+                ("", f" 주둔  : {town.garrison_strength}/10\n"),
+                ("", f" 성벽  : [{wall_bar}] {town.wall_hp}/{town.max_wall_hp}\n"),
+                ("", f" 인구  : {town.population:,}\n"),
+                ("", f" 세금  : {town.tax_yield}  식량: {town.food_yield}\n"),
+                ("", "\n 인접 거점:\n"),
+            ]
+            for adj in adj_names:
+                lines.append(("fg:ansigreen", f"   · {adj}\n"))
+            if not adj_names:
+                lines.append(("fg:ansibrightblack", "   (없음)\n"))
+            return lines
+
+        # ---- key bindings --------------------------------------------
+
+        kb = KeyBindings()
+
+        @kb.add("up")
+        def _up(event):
+            cursor[0] = (cursor[0] - 1) % len(towns)
+            event.app.invalidate()
+
+        @kb.add("down")
+        def _down(event):
+            cursor[0] = (cursor[0] + 1) % len(towns)
+            event.app.invalidate()
+
+        @kb.add("enter")
+        def _select(event):
+            result[0] = towns[cursor[0]].id
+            event.app.exit()
+
+        @kb.add("escape")
+        @kb.add("q")
+        def _cancel(event):
+            event.app.exit()
+
+        # ---- layout --------------------------------------------------
+
+        layout = Layout(
+            HSplit([
+                VSplit([
+                    Window(
+                        content=FormattedTextControl(left_text),
+                        width=30,
+                    ),
+                    Window(width=1, char="│"),
+                    Window(
+                        content=FormattedTextControl(right_text),
+                    ),
+                ]),
+            ])
+        )
+
+        app: Application = Application(
+            layout=layout,
+            key_bindings=kb,
+            full_screen=True,
+            mouse_support=False,
+            color_depth=None,
+        )
+        app.run()
+        return result[0]
