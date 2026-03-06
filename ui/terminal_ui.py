@@ -6,7 +6,7 @@ import questionary
 from prompt_toolkit import Application
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
-from prompt_toolkit.layout.containers import VSplit, Window, HSplit
+from prompt_toolkit.layout.containers import VSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
 from rich.console import Console
 from rich.panel import Panel
@@ -39,6 +39,32 @@ def _select(message: str, choices: list[str], display: list[str] | None = None) 
 
 class TerminalUI:
     """Rich + questionary 터미널 UI."""
+
+    # Grid coordinates (col, row) — geographically approximate
+    _COORDS: dict[str, tuple[int, int]] = {
+        "weizhou":   (0, 1), "taiyuan":   (3, 0), "cangzhou":  (6, 0),
+        "daming":    (5, 1),
+        "liangshan": (1, 3), "yunzhou":   (3, 3), "jizhou":    (5, 3),
+        "qingzhou":  (7, 3), "dengzhou":  (9, 3),
+        "dongping":  (1, 4), "dongchang": (5, 4),
+        "mengzhou":  (2, 5),
+        "bianjing":  (5, 6),
+        "huazhou":   (5, 7),
+        "jiangzhou": (5, 9), "yangzhou":  (7, 9),
+        "hangzhou":  (7, 10), "suzhou":   (9, 10),
+        "luzhou":    (6, 11),
+        "jingnan":   (4, 12),
+    }
+    _SHORT: dict[str, str] = {
+        "weizhou": "위주", "taiyuan": "태원", "cangzhou": "창주",
+        "daming": "대명", "liangshan": "梁山", "yunzhou": "운주",
+        "jizhou": "기주", "dongping": "동평", "qingzhou": "청주",
+        "dengzhou": "등주", "dongchang": "동창", "bianjing": "변경",
+        "mengzhou": "맹주", "huazhou": "화주", "jiangzhou": "강주",
+        "hangzhou": "항주", "suzhou": "소주", "yangzhou": "양주",
+        "luzhou": "노주", "jingnan": "형남",
+    }
+    _TYPE_ICON = {"village": "마을", "fortress": "요새", "metropolis": "대도시"}
 
     def __init__(self) -> None:
         self.console = Console()
@@ -86,12 +112,69 @@ class TerminalUI:
                 )
                 self.console.print(Panel(status, title="세력 현황", border_style="blue"))
 
+    def _get_map_grid_data(self, state: GameState) -> tuple[dict[str, tuple[int, int]], int, int, dict[tuple[int, int], str]]:
+        """Prepares coordinate and grid size data for map rendering."""
+        towns = list(state.towns.values())
+        town_by_id = {t.id: t for t in towns}
+
+        _all_coords: dict[str, tuple[int, int]] = {}
+        _max_r = max(r for _, r in self._COORDS.values()) if self._COORDS else 0
+        _extra_col = 0
+        for t in towns:
+            if t.id in self._COORDS:
+                _all_coords[t.id] = self._COORDS[t.id]
+            else:
+                # Assign overflow coords for any town not in _COORDS
+                _all_coords[t.id] = (_extra_col, _max_r + 2)
+                _extra_col += 1
+
+        _max_col = max(c for c, _ in _all_coords.values()) if _all_coords else 0
+        _max_row = max(r for _, r in _all_coords.values()) if _all_coords else 0
+        _coord_to_id: dict[tuple[int, int], str] = {
+            v: k for k, v in _all_coords.items() if k in town_by_id
+        }
+        return _all_coords, _max_col, _max_row, _coord_to_id
+
+    def _render_static_map(self, state: GameState, hero_current_town_id: str) -> None:
+        """Generates and prints a static, non-interactive ASCII map for display."""
+        _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
+        town_by_id = {t.id: t for t in state.towns.values()}
+
+        self.console.print("[bold underline] 전략 지도  (북→남 / 서→동)[/]")
+        self.console.print("─" * 52)
+
+        for row in range(_max_row + 1):
+            line_parts: list[tuple[str, str]] = [("", "  ")]
+            for col in range(_max_col + 1):
+                tid = _coord_to_id.get((col, row))
+                if tid is None:
+                    line_parts.append(("", "       "))   # 7 cols blank
+                else:
+                    short = self._SHORT.get(tid, tid[:2])
+                    t = town_by_id[tid]
+                    if tid == hero_current_town_id:
+                        style = "bold fg:ansiblack bg:ansiyellow"
+                    elif t.controlled_by_faction == "liangshan":
+                        style = "fg:ansibrightgreen"
+                    else:
+                        style = "fg:ansibrightred"
+                    line_parts.append((style, f"[{short}]"))
+                    line_parts.append(("", "  "))        # 2-col separator
+            for style, text in line_parts:
+                self.console.print(text, style=style, end="")
+            self.console.print("")  # Newline at the end of each row
+        self.console.print("─" * 52)     # Separator at the bottom
+
     def choose_action(self, hero: Hero, state: GameState) -> str:
         town = state.towns[hero.current_town]
         self.console.print(
             f"\n[bold cyan]{hero.name_ko}[/] "
             f"(위치: {town.name_ko}, 병력: {hero.current_army},"
-            f" AP: {hero.action_points})")
+            f" AP: {hero.action_points})"
+        )
+
+        # Display the static map here
+        self._render_static_map(state, hero.current_town)
 
         choices = [
             ("move",        "이동       — 인접 지역으로 이동"),
@@ -151,69 +234,92 @@ class TerminalUI:
             ))
 
     # ------------------------------------------------------------------
-    # Interactive map (prompt_toolkit full-screen cursor navigation)
+    # Interactive map — left: town list, right: 2D grid map + detail
     # ------------------------------------------------------------------
 
     def show_map(self, state: GameState) -> Optional[str]:
-        """Full-screen cursor-navigable map.
+        """Full-screen 2D map with cursor navigation.
 
-        ↑↓ arrows move the cursor between towns.
-        Enter selects the highlighted town and returns its id.
-        Escape / q returns None (cancel).
+        Left panel  : town list (↑↓ to move cursor)
+        Right panel : ASCII 2D grid map + selected town detail
+        Enter = select town, Escape/q = cancel.
         """
-        _TYPE_ICON = {"village": "마을", "fortress": "요새", "metropolis": "대도시"}
         towns = list(state.towns.values())
+        town_by_id = {t.id: t for t in towns}
         cursor = [0]
         result: list[Optional[str]] = [None]
 
-        # ---- renderers -----------------------------------------------
+        # Get grid data using the helper method
+        _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
 
-        def left_text():
-            lines: list[tuple[str, str]] = []
-            lines.append(("bold underline", " 거점 목록\n"))
-            lines.append(("", "─" * 28 + "\n"))
-            for i, town in enumerate(towns):
-                faction = state.factions.get(town.controlled_by_faction)
-                faction_name = faction.name_ko[:4] if faction else "중립"
-                if i == cursor[0]:
-                    lines.append(("bold fg:ansiyellow reverse", f" ▶ {town.name_ko:<8} {faction_name}\n"))
-                else:
-                    lines.append(("", f"   {town.name_ko:<8} {faction_name}\n"))
-            lines.append(("", "\n"))
-            lines.append(("fg:ansibrightblack", " ↑↓이동  Enter선택  q취소"))
-            return lines
-
-        def right_text():
-            town = towns[cursor[0]]
-            faction = state.factions.get(town.controlled_by_faction)
-            faction_name = faction.name_ko if faction else "중립"
-            adj_names = [
-                state.towns[a].name_ko
-                for a in town.adjacent
-                if a in state.towns
-            ]
-            type_label = _TYPE_ICON.get(town.town_type, town.town_type)
-            wall_bar = "█" * int(town.wall_integrity() * 10) + "░" * (10 - int(town.wall_integrity() * 10))
+        # ------------------------------------------------------------------
+        def left_text() -> list[tuple[str, str]]:
             lines: list[tuple[str, str]] = [
-                ("bold underline", f" {town.name_ko}  {town.name_zh}\n"),
-                ("", "─" * 36 + "\n"),
-                ("", f" 유형  : {type_label}\n"),
-                ("", f" 세력  : {faction_name}\n"),
-                ("", f" 방어  : {'★' * town.defense_level}{'☆' * (10 - town.defense_level)}\n"),
-                ("", f" 주둔  : {town.garrison_strength}/10\n"),
-                ("", f" 성벽  : [{wall_bar}] {town.wall_hp}/{town.max_wall_hp}\n"),
-                ("", f" 인구  : {town.population:,}\n"),
-                ("", f" 세금  : {town.tax_yield}  식량: {town.food_yield}\n"),
-                ("", "\n 인접 거점:\n"),
+                ("bold underline", " 거점 목록\n"),
+                ("", "─" * 24 + "\n"),
             ]
-            for adj in adj_names:
-                lines.append(("fg:ansigreen", f"   · {adj}\n"))
-            if not adj_names:
-                lines.append(("fg:ansibrightblack", "   (없음)\n"))
+            for i, t in enumerate(towns):
+                faction = state.factions.get(t.controlled_by_faction)
+                fname = faction.name_ko[:4] if faction else "중립"
+                if i == cursor[0]:
+                    lines.append(("bold fg:ansiyellow reverse",
+                                  f" ▶ {t.name_ko:<7} {fname}\n"))
+                else:
+                    lines.append(("", f"   {t.name_ko:<7} {fname}\n"))
+            lines += [("", "\n"), ("fg:ansibrightblack", " ↑↓이동  Enter선택  q취소")]
             return lines
 
-        # ---- key bindings --------------------------------------------
+        # ------------------------------------------------------------------
+        def map_text() -> list[tuple[str, str]]:
+            sel_id = towns[cursor[0]].id
+            sel = town_by_id[sel_id]
 
+            lines: list[tuple[str, str]] = [
+                ("bold underline", " 전략 지도  (북→남 / 서→동)\n"),
+                ("", "─" * 52 + "\n"),
+            ]
+
+            for row in range(_max_row + 1):
+                lines.append(("", "  "))
+                for col in range(_max_col + 1):
+                    tid = _coord_to_id.get((col, row))
+                    if tid is None:
+                        lines.append(("", "       "))   # 7 cols blank
+                    else:
+                        short = self._SHORT.get(tid, tid[:2])
+                        t = town_by_id[tid]
+                        if tid == sel_id:
+                            style = "bold fg:ansiblack bg:ansiyellow"
+                        elif t.controlled_by_faction == "liangshan":
+                            style = "fg:ansibrightgreen"
+                        else:
+                            style = "fg:ansibrightred"
+                        lines.append((style, f"[{short}]"))
+                        lines.append(("", "  "))        # 2-col separator
+                lines.append(("", "\n"))
+
+            # ---- selected town detail ----
+            faction = state.factions.get(sel.controlled_by_faction)
+            fname = faction.name_ko if faction else "중립"
+            wbar = "█" * int(sel.wall_integrity() * 8) + "░" * (8 - int(sel.wall_integrity() * 8))
+            adj = ", ".join(
+                town_by_id[a].name_ko for a in sel.adjacent if a in town_by_id
+            ) or "없음"
+            type_label = self._TYPE_ICON.get(sel.town_type, sel.town_type)
+
+            lines += [
+                ("", "\n"),
+                ("bold fg:ansiyellow", f" ▶ {sel.name_ko} ({sel.name_zh})  {type_label}\n"),
+                ("", "─" * 52 + "\n"),
+                ("", f" 세력 : {fname:<12}  방어 : {'★' * sel.defense_level}{'☆' * (10 - sel.defense_level)}\n"),
+                ("", f" 성벽 : [{wbar}] {sel.wall_hp}/{sel.max_wall_hp}"
+                     f"      인구 : {sel.population:,}\n"),
+                ("", f" 세금 : {sel.tax_yield:<6} 식량 : {sel.food_yield}\n"),
+                ("fg:ansibrightblack", f" 인접 : {adj}\n"),
+            ]
+            return lines
+
+        # ------------------------------------------------------------------
         kb = KeyBindings()
 
         @kb.add("up")
@@ -227,38 +333,27 @@ class TerminalUI:
             event.app.invalidate()
 
         @kb.add("enter")
-        def _select(event):
+        def _enter(event):
             result[0] = towns[cursor[0]].id
             event.app.exit()
 
         @kb.add("escape")
         @kb.add("q")
-        def _cancel(event):
+        def _quit(event):
             event.app.exit()
 
-        # ---- layout --------------------------------------------------
-
         layout = Layout(
-            HSplit([
-                VSplit([
-                    Window(
-                        content=FormattedTextControl(left_text),
-                        width=30,
-                    ),
-                    Window(width=1, char="│"),
-                    Window(
-                        content=FormattedTextControl(right_text),
-                    ),
-                ]),
+            VSplit([
+                Window(content=FormattedTextControl(left_text), width=26),
+                Window(width=1, char="│"),
+                Window(content=FormattedTextControl(map_text)),
             ])
         )
 
-        app: Application = Application(
+        Application(
             layout=layout,
             key_bindings=kb,
             full_screen=True,
             mouse_support=False,
-            color_depth=None,
-        )
-        app.run()
+        ).run()
         return result[0]

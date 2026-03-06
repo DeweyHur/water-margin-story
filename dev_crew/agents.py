@@ -8,11 +8,12 @@ from config.llm_config import (
     get_groq_tool_llm, get_manager_llm, get_gemini_flash_llm,
 )
 from tools.python_runner_tool import PythonRunnerTool
-from tools.file_tools import SimpleFileReadTool, SimpleFileWriteTool
+from tools.file_tools import SimpleFileReadTool, SimpleFileWriteTool, PatchProjectFileTool
 
 _python_runner = PythonRunnerTool()
 _file_read = SimpleFileReadTool()
 _file_write = SimpleFileWriteTool()
+_file_patch = PatchProjectFileTool()
 
 
 def project_manager() -> Agent:
@@ -73,7 +74,7 @@ def game_developer() -> Agent:
             "클린 코드, 단일 책임 원칙, 테스트 가능한 설계를 중시한다. "
             "코드를 저장한 뒤 반드시 python_runner로 import 및 기본 동작을 확인한다."
         ),
-        tools=[_file_read, _file_write, _python_runner],
+        tools=[_file_read, _file_write, _file_patch, _python_runner],
         llm=get_code_llm(),
         verbose=True,
         allow_delegation=False,
@@ -184,7 +185,7 @@ def ui_developer() -> Agent:
             "코드를 저장한 뒤 python_runner로 import 에러 없는지 검증한다. "
             "게임 로직 파일은 읽기만 하고 절대 수정하지 않는다."
         ),
-        tools=[_file_read, _file_write, _python_runner],
+        tools=[_file_read, _file_write, _file_patch, _python_runner],
         llm=get_code_llm(),
         verbose=True,
         allow_delegation=False,

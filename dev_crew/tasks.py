@@ -43,25 +43,29 @@ def implement_feature_task(feature_request: str, developer: Agent) -> Task:
     """설계+구현 통합 태스크 - 파일 직접 읽고 수정."""
     return Task(
         description=(
-            "파일을 1개씩 순서대로 읽고 수정하라.\n\n"
+            "아래 순서대로 도구를 호출하라.\n\n"
             "1. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
-            "2. read_project_file 호출: file_path='game/engine.py'\n"
-            "3. read_project_file 호출: file_path='models/game_state.py'\n"
-            "4. 기능 요청에 맞게 수정할 파일을 1개 선택\n"
-            "5. write_project_file 호출: 해당 파일 저장\n"
-            "6. python_runner 호출: "
+            "2. read_project_file 호출: file_path='game/turn_manager.py'\n"
+            "3. read_project_file 호출: file_path='game/engine.py'\n"
+            "4. read_project_file 호출: file_path='models/game_state.py'\n"
+            "5. read_project_file 호출: file_path='models/town.py'\n"
+            "6. 기능 요청을 구현하기 위해 수정이 필요한 파일을 모두 파악하라.\n"
+            "7. 각 수정 파일마다 저장 — 규칙:\n"
+            "   - 기존 함수·메서드·클래스만 교체할 때: patch_project_file(file_path, old_code, new_code) 호출.\n"
+            "   - 새 파일 생성 또는 파일 전체 재작성할 때만: write_project_file 호출.\n"
+            "   - ui/terminal_ui.py 등 200줄 이상 파일은 반드시 patch_project_file로 특정 함수만 교체하라.\n"
+            "8. python_runner 호출: "
             "code='import sys; sys.path.insert(0,\".\"); "
             "from ui.terminal_ui import TerminalUI; "
-            "from models.game_state import GameState; print(\"VERIFY_OK\")'\n"
-            "7. 수정할 파일이 더 있으면 5-6 반복\n\n"
+            "from models.game_state import GameState; print(\"VERIFY_OK\")'\n\n"
             f"기능 요청: {feature_request}\n\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
             "from __future__ import annotations, 기존 import 절대 제거 금지. "
-            "기존 함수·클래스·메서드 절대 삭제 금지 — 새 코드만 추가하라. "
-            "파일 전체를 새로 작성하지 말 것 — 기존 파일에 필요한 부분만 추가·수정. "
-            "코드를 텍스트로 출력하지 말 것."
+            "기존 함수·클래스·메서드 절대 삭제 금지 — 새 코드만 추가하라."
         ),
-        expected_output="python_runner 결과 'VERIFY_OK' 포함 여부.",
+        expected_output=(
+            "python_runner 결과 'VERIFY_OK' 포함 + 변경 파일 목록 및 추가 함수명."
+        ),
         agent=developer,
     )
 
@@ -105,15 +109,20 @@ def developer_fix_from_tester_task(developer: Agent) -> Task:
 def developer_fix_from_review_task(developer: Agent) -> Task:
     return Task(
         description=(
-            "도구를 반드시 한 번에 하나씩 순서대로 호출하라.\n\n"
-            "1. read_project_file 호출: file_path='/tmp/wm_review.md'\n"
-            "2. read_project_file 호출: 리뷰에서 지목된 파일 읽기\n"
-            "3. write_project_file 호출: 지적 사항 수정 후 저장\n"
+            "앞선 리뷰어 결과(context)를 읽고 즉시 아래 순서대로 도구를 호출하라.\n\n"
+            "1. context에서 '수정 필요 파일' 목록을 파악한다.\n"
+            "2. read_project_file 호출: 수정 필요 파일을 읽는다.\n"
+            "3. 파일 저장 — 규칙:\n"
+            "   - 기존 함수·메서드·클래스만 교체할 때: patch_project_file(file_path, old_code, new_code) 호출.\n"
+            "   - 새 파일 생성 또는 파일 전체 재작성할 때만: write_project_file 호출.\n"
+            "   - ui/terminal_ui.py 등 200줄 이상 파일은 반드시 patch_project_file로 특정 함수만 교체하라.\n"
+            "   (구현 완성도 YES이고 품질 점수 5/5이면 2-3번 생략 가능)\n"
             "4. python_runner 호출: "
             "code='import sys; sys.path.insert(0,\".\"); "
             "import models; import game; print(\"FIX_OK\")'\n\n"
-            "품질 점수 7점 미만이면 전면 개선, 7점 이상이면 지적 항목만 수정. "
-            "코드를 텍스트로 출력하지 말 것 — write_project_file로 저장할 것."
+            "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
+            "from __future__ import annotations. "
+            "기존 함수·클래스 삭제 금지 — 새 코드만 추가."
         ),
         expected_output="python_runner 결과 'FIX_OK' 포함 여부.",
         agent=developer,
@@ -148,6 +157,31 @@ def review_content_quality_task(reviewer: Agent) -> Task:
             "write_project_file로 /tmp/wm_content_review.md에 저장하라."
         ),
         expected_output="/tmp/wm_content_review.md 저장 완료 확인. 품질 점수 포함.",
+        agent=reviewer,
+    )
+
+
+def review_feature_task(feature_request: str, reviewer: Agent) -> Task:
+    """기능 구현 여부를 확인하는 리뷰 태스크."""
+    return Task(
+        description=(
+            f"관련 파일({_UI_FILES})을 read_project_file로 읽어라.\n\n"
+            "다음을 반드시 검토하라:\n"
+            "1. 기능 요청이 실제로 구현되었는가? "
+            "   (새 함수/메서드/로직이 코드에 존재하는가?) → 구현 완성도 YES/NO\n"
+            "2. import 경로, Pydantic v2 문법, 타입 힌트, Python 3.11+ 준수 여부\n"
+            "3. 기존 기능이 삭제되거나 손상되지 않았는가?\n"
+            "4. 엣지케이스 처리 여부\n\n"
+            f"기능 요청: {feature_request}\n\n"
+            "검토 결과를 아래 형식으로 Final Answer에 출력하라 "
+            "(파일 저장 불필요 — 이 출력이 다음 개발자에게 컨텍스트로 직접 전달된다):\n"
+            "구현 완성도: YES/NO\n"
+            "없는 기능 명세: (없는 함수·로직 목록)\n"
+            "수정 필요 파일: (파일 경로 목록)\n"
+            "품질 점수: X/5\n"
+            "종합 의견: ..."
+        ),
+        expected_output="구현 완성도 YES/NO · 없는 것 명세 · 수정 필요 파일 목록 · 품질 점수 포함.",
         agent=reviewer,
     )
 

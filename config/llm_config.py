@@ -35,12 +35,12 @@ def get_manager_llm(temperature: float = 0.3) -> LLM:
 
 
 def get_groq_tool_llm(temperature: float = 0.2, max_tokens: int = 8192) -> LLM:
-    """Groq Llama 4 Scout 17Bx16E — 128k context, tool calling 고성능. max_tokens 상한 8192."""
+    """Groq Llama 4 Scout 17Bx16E — 128k context, tool calling 고성능."""
     return LLM(
         model="groq/meta-llama/llama-4-scout-17b-16e-instruct",
         api_key=_GROQ_KEY,
         temperature=temperature,
-        max_tokens=min(max_tokens, 8192),
+        max_tokens=max_tokens,
     )
 
 
@@ -60,7 +60,7 @@ def get_design_llm() -> LLM:
 
 
 def get_code_llm() -> LLM:
-    """코드 생성 — FileWriterTool·python_runner 사용, Llama 4 Scout tool calling. (max 8192)"""
+    """코드 생성 — FileWriterTool·python_runner 사용, Llama 4 Scout tool calling."""
     return get_groq_tool_llm(temperature=0.1, max_tokens=8192)
 
 
