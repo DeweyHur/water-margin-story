@@ -5,7 +5,7 @@ from crewai import Agent
 
 from config.llm_config import (
     get_design_llm, get_code_llm, get_review_llm,
-    get_groq_tool_llm, get_manager_llm, get_gemini_flash_llm,
+    get_groq_tool_llm, get_manager_llm,
 )
 from tools.python_runner_tool import PythonRunnerTool
 from tools.file_tools import SimpleFileReadTool, SimpleFileWriteTool, PatchProjectFileTool
@@ -119,7 +119,7 @@ def code_reviewer() -> Agent:
             "실용성을 중시하여 구체적인 수정 코드를 제안한다."
         ),
         tools=[_file_read, _file_write],
-        llm=get_gemini_flash_llm(temperature=0.1),
+        llm=get_review_llm(),
         verbose=True,
         allow_delegation=False,
         max_iter=4,
@@ -142,7 +142,7 @@ def game_tester() -> Agent:
             "재현 가능한 최소 코드 스니펫을 만들어 개발자에게 넘긴다."
         ),
         tools=[_file_read, _python_runner],
-        llm=get_gemini_flash_llm(temperature=0.1),
+        llm=get_review_llm(),
         verbose=True,
         allow_delegation=False,
         max_iter=8,
