@@ -138,36 +138,132 @@ class TerminalUI:
         return _all_coords, _max_col, _max_row, _coord_to_id
 
     def _render_static_map(self, state: GameState, hero_current_town_id: str, highlight_town_id: Optional[str] = None) -> None:
-        """Generates and prints a static, non-interactive ASCII map for display."""
+        """Render an ASCII map with Bresenham connection lines between adjacent towns."""
+        import unicodedata
+        from rich.text import Text
+
+        def _dw(s: str) -> int:
+            """Terminal display width (CJK chars count as 2)."""
+            w = 0
+            for c in s:
+                eaw = unicodedata.east_asian_width(c)
+                w += 2 if eaw in ("W", "F") else 1
+            return w
+
         _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
         town_by_id = {t.id: t for t in state.towns.values()}
 
+        CELL_W = 8   # display cols per grid column
+        CELL_H = 3   # canvas rows per grid row
+
+        canvas_w = (_max_col + 1) * CELL_W + 8
+        canvas_h = (_max_row + 1) * CELL_H + 2
+
+        # canvas[y][x] = (char, style)  — x is a display-column index
+        canvas: list[list[tuple[str, str]]] = [
+            [(" ", "") for _ in range(canvas_w)] for _ in range(canvas_h)
+        ]
+
+        def _px(col: int) -> int:
+            return col * CELL_W + 2
+
+        def _py(row: int) -> int:
+            return row * CELL_H + 1
+
+        def _set(y: int, x: int, ch: str, style: str = "") -> None:
+            if 0 <= y < canvas_h and 0 <= x < canvas_w:
+                if canvas[y][x][0] == " ":
+                    canvas[y][x] = (ch, style)
+
+        def _bresenham(x0: int, y0: int, x1: int, y1: int) -> None:
+            adx = abs(x1 - x0)
+            ady = abs(y1 - y0)
+            sx = 1 if x0 < x1 else -1
+            sy = 1 if y0 < y1 else -1
+            if adx == 0:
+                ch = "|"
+            elif ady == 0:
+                ch = "-"
+            elif (sx > 0) == (sy > 0):
+                ch = "\\"
+            else:
+                ch = "/"
+            err = adx - ady
+            while True:
+                _set(y0, x0, ch, "dim cyan")
+                if x0 == x1 and y0 == y1:
+                    break
+                e2 = 2 * err
+                if e2 > -ady:
+                    err -= ady
+                    x0 += sx
+                if e2 < adx:
+                    err += adx
+                    y0 += sy
+
+        # --- 1. Draw connection lines (drawn first; labels overwrite them) ---
+        seen_edges: set[frozenset] = set()
+        for tid, town in town_by_id.items():
+            if tid not in _all_coords:
+                continue
+            c0, r0 = _all_coords[tid]
+            for adj_id in town.adjacent:
+                edge: frozenset = frozenset({tid, adj_id})
+                if edge in seen_edges or adj_id not in _all_coords:
+                    continue
+                seen_edges.add(edge)
+                c1, r1 = _all_coords[adj_id]
+                _bresenham(_px(c0), _py(r0), _px(c1), _py(r1))
+
+        # --- 2. Place town labels onto canvas (overwrite line chars) ---
+        for tid, (col, row) in _all_coords.items():
+            if tid not in town_by_id:
+                continue
+            short = self._SHORT.get(tid, tid[:2])
+            label = f"[{short}]"
+            label_dw = _dw(label)
+            cx = _px(col) - label_dw // 2
+            cy = _py(row)
+
+            t = town_by_id[tid]
+            if tid == highlight_town_id:
+                style = "bold black on bright_yellow"
+            elif tid == hero_current_town_id:
+                style = "bold black on yellow"
+            elif t.controlled_by_faction == "liangshan":
+                style = "bright_green"
+            else:
+                style = "bright_red"
+
+            x = cx
+            for ch in label:
+                cw = _dw(ch)
+                if 0 <= cy < canvas_h and 0 <= x < canvas_w:
+                    canvas[cy][x] = (ch, style)
+                    if cw == 2 and x + 1 < canvas_w:
+                        canvas[cy][x + 1] = ("\x00", style)  # wide-char placeholder
+                x += cw
+
+        # --- 3. Render canvas row by row ---
         self.console.print("[bold underline] 전략 지도  (북→남 / 서→동)[/]")
         self.console.print("─" * 52)
 
-        for row in range(_max_row + 1):
-            line_parts: list[tuple[str, str]] = [("", "  ")]
-            for col in range(_max_col + 1):
-                tid = _coord_to_id.get((col, row))
-                if tid is None:
-                    line_parts.append(("", "       "))   # 7 cols blank
+        for y in range(canvas_h):
+            line = Text()
+            x = 0
+            while x < canvas_w:
+                ch, style = canvas[y][x]
+                if ch == "\x00":
+                    x += 1
+                    continue
+                if style:
+                    line.append(ch, style=style)
                 else:
-                    short = self._SHORT.get(tid, tid[:2])
-                    t = town_by_id[tid]
-                    if tid == highlight_town_id: # New highlight for selected/hovered town
-                        style = "bold black on bright_yellow"
-                    elif tid == hero_current_town_id:
-                        style = "bold black on yellow"
-                    elif t.controlled_by_faction == "liangshan":
-                        style = "bright_green"
-                    else:
-                        style = "bright_red"
-                    line_parts.append((style, f"[{short}]"))
-                    line_parts.append(("", "  "))        # 2-col separator
-            for style, text in line_parts:
-                self.console.print(text, style=style, end="")
-            self.console.print("")  # Newline at the end of each row
-        self.console.print("─" * 52)     # Separator at the bottom
+                    line.append(ch)
+                x += 1
+            self.console.print(line)
+
+        self.console.print("─" * 52)
 
     def choose_action(self, hero: Hero, state: GameState) -> str:
         self.console.clear()
@@ -373,4 +469,25 @@ class TerminalUI:
             full_screen=True,
             mouse_support=False,
         ).run()
-        return result[0]
+
+
+    def show_combat_preview(self, hero_town_id: str, target_town_id: str, state: GameState) -> None:
+        hero_town = state.towns.get(hero_town_id)
+        target_town = state.towns.get(target_town_id)
+        h_name = hero_town.name_ko if hero_town else hero_town_id
+        t_name = target_town.name_ko if target_town else target_town_id
+        self.console.clear()
+        self.console.print(f'  {h_name} ===> {t_name}  Attack Start!')
+        self._render_static_map(state, hero_town_id, highlight_town_id=target_town_id)
+        input('Press Enter to start battle...')
+
+    def show_faction_change_animation(self, town_id: str, old_faction_id: str, new_faction_id: str, state: GameState) -> None:
+        import time
+        town = state.towns.get(town_id)
+        t_name = town.name_ko if town else town_id
+        for _ in range(3):
+            self.console.clear()
+            self._render_static_map(state, town_id, highlight_town_id=town_id)
+            time.sleep(0.5)
+        self.console.clear()
+        self.console.print(f'  Captured: {t_name}  {old_faction_id} -> {new_faction_id}')
