@@ -70,6 +70,7 @@ class TerminalUI:
         self.console = Console()
 
     def show_title(self) -> None:
+        self.console.clear()
         self.console.print(Panel.fit(
             "[bold red]수호지: 북송의 황혼 (Water Margin: Strategy Simulation)[/]\n"
             "[yellow]전략 시뮬레이션 확장판[/]",
@@ -77,6 +78,7 @@ class TerminalUI:
         ))
 
     def choose_hero(self, heroes: list[Hero]) -> Hero:
+        self.console.clear()
         table = Table(title="영웅 선택")
         table.add_column("이름", style="bold")
         table.add_column("별명", style="magenta")
@@ -100,6 +102,7 @@ class TerminalUI:
         return next(h for h in heroes if h.id == chosen_id)
 
     def show_turn_header(self, state: GameState) -> None:
+        self.console.clear()
         self.console.rule(f"[bold yellow]제 {state.turn} 턴 (남은 턴: {state.turns_remaining()})[/]")
         player_hero = next((h for h in state.heroes.values() if h.is_player_controlled), None)
         if player_hero:
@@ -135,7 +138,7 @@ class TerminalUI:
         }
         return _all_coords, _max_col, _max_row, _coord_to_id
 
-    def _render_static_map(self, state: GameState, hero_current_town_id: str) -> None:
+    def _render_static_map(self, state: GameState, hero_current_town_id: str, highlight_town_id: Optional[str] = None) -> None:
         """Generates and prints a static, non-interactive ASCII map for display."""
         _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
         town_by_id = {t.id: t for t in state.towns.values()}
@@ -152,7 +155,9 @@ class TerminalUI:
                 else:
                     short = self._SHORT.get(tid, tid[:2])
                     t = town_by_id[tid]
-                    if tid == hero_current_town_id:
+                    if tid == highlight_town_id: # New highlight for selected/hovered town
+                        style = "bold black on bright_yellow"
+                    elif tid == hero_current_town_id:
                         style = "bold black on yellow"
                     elif t.controlled_by_faction == "liangshan":
                         style = "bright_green"
@@ -174,7 +179,7 @@ class TerminalUI:
         )
 
         # Display the static map here
-        self._render_static_map(state, hero.current_town)
+        self._render_static_map(state, hero.current_town, highlight_town_id=None)
 
         choices = [
             ("move",        "이동       — 인접 지역으로 이동"),
@@ -190,6 +195,7 @@ class TerminalUI:
         return _select("행동을 선택하세요 (↑↓ + Enter)", ids, display)
 
     def choose_destination(self, hero: Hero, town: Town, state: GameState) -> Optional[str]:
+        self.console.clear()
         table = Table(title=f"{town.name_ko} 인접 지역")
         table.add_column("이름", style="bold")
         table.add_column("지배 세력", style="green")
@@ -224,6 +230,7 @@ class TerminalUI:
         )
 
     def show_game_over(self, state: GameState) -> None:
+        self.console.clear()
         if state.phase == "won":
             self.console.print(Panel.fit(
                 "[bold yellow]축하합니다! 천하를 평정하고 새로운 질서를 세웠습니다![/]", title="승리"
