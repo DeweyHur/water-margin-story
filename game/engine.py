@@ -51,21 +51,59 @@ class GameEngine:
     def _setup(self) -> None:
         self._load_factions()
         self._load_towns()
-        heroes_data = self._load_hero_roster()
-        
-        # Filter heroes by faction or availability
-        chosen = self.ui.choose_hero(heroes_data)
+        all_heroes = self._load_hero_roster()
+        all_scenarios = self._load_scenarios()
+
+        # 1. Scenario selection
+        scenario = self.ui.choose_scenario(all_scenarios)
+        self._apply_scenario(scenario, all_heroes)
+        self.state.max_turns = scenario["max_turns"]
+        self.state.dynasty_stability = scenario["dynasty_stability"]
+
+        # 2. Hero selection — only playable heroes for this scenario
+        playable_ids = set(scenario.get("playable_heroes", []))
+        playable = [h for h in all_heroes if h.id in playable_ids]
+        if not playable:
+            playable = all_heroes  # fallback
+
+        chosen = self.ui.choose_hero(playable)
         chosen.is_player_controlled = True
         chosen.player_id = "player1"
         self.state.heroes[chosen.id] = chosen
         self.state.player_ids.append("player1")
 
-        # Add all other heroes to the state as AI
-        for h in heroes_data:
-            if h.id != chosen.id:
+        # Add remaining heroes (already placed by _apply_scenario) to state
+        for h in all_heroes:
+            if h.id not in self.state.heroes:
                 self.state.heroes[h.id] = h
 
         self.ui.show_setup_complete(self.state, chosen)
+
+    def _load_scenarios(self) -> list[dict]:
+        with open(self._config_dir / "scenarios.yaml", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        return data["scenarios"]
+
+    def _apply_scenario(self, scenario: dict, heroes: list) -> None:
+        """Apply initial faction town control and hero starting positions."""
+        # Town control
+        town_ctrl: dict[str, list[str]] = scenario.get("town_control", {})
+        for faction_id, town_ids in town_ctrl.items():
+            faction = self.state.factions.get(faction_id)
+            if faction:
+                faction.controlled_towns = list(town_ids)
+            for tid in town_ids:
+                if tid in self.state.towns:
+                    self.state.towns[tid].controlled_by_faction = faction_id
+
+        # Hero starting locations
+        hero_starts: dict[str, str] = scenario.get("hero_starts", {})
+        hero_by_id = {h.id: h for h in heroes}
+        for hero_id, town_id in hero_starts.items():
+            h = hero_by_id.get(hero_id)
+            if h and town_id in self.state.towns:
+                h.current_town = town_id
+
 
     def _load_factions(self) -> None:
         with open(self._config_dir / "factions.yaml", encoding="utf-8") as f:

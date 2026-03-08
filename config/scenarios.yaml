@@ -1,0 +1,283 @@
+scenarios:
+  # ══════════════════════════════════════════════════════════════
+  # 시나리오 1 — 1101년 임충의 도주 (林沖逃亡)
+  # 핵심 사건: 고구의 모략으로 임충이 창주로 유배
+  # ══════════════════════════════════════════════════════════════
+  - id: scenario_1101
+    year: 1101
+    name_ko: "1101년 — 임충의 도주"
+    name_zh: "宣和三年 — 豹子頭逃亡"
+    description: |
+      고구(高俅)의 태위 자리가 굳건하다. 그의 양아들 고아내(高衙內)가
+      금군교두(金軍敎頭) 임충(林沖)의 처를 탐해 모략을 꾸미고,
+      임충은 억울하게 죄를 뒤집어쓰고 창주(滄州)로 유배된다.
+      양산박(梁山泊)은 왕륜(王倫)이 이끄는 소규모 도적패에 불과하며,
+      송강(宋江)은 여전히 운성(鄆城) 현청의 말단 서리다.
+      영웅들은 각지에 흩어져 있고 세상은 아직 그들을 부르지 않았다.
+    background_hint: "플레이어 추천 ★ 임충(林沖) — 창주에서 탈출해 양산박으로 향하는 도주극"
+    max_turns: 30
+    dynasty_stability: 90
+    playable_heroes:
+      - lin_chong
+      - song_jiang
+      - lu_zhishen
+      - wu_song
+    town_control:
+      imperial:
+        - bianjing
+        - daming
+        - cangzhou
+        - taiyuan
+        - zhending
+        - yanmen
+        - yanzhou
+        - xiangzhou
+        - yunzhou
+        - dongping
+        - qingzhou
+        - dengzhou
+        - jizhou
+        - dongchang
+        - weizhou
+        - mengzhou
+        - huazhou
+        - yangzhou
+        - wuwei
+        - luzhou
+        - jiangzhou
+        - suzhou
+        - hangzhou
+      liangshan:
+        - liangshan
+      liao: []
+      jin: []
+      erlongshan: []
+      qingfeng: []
+    hero_starts:
+      lin_chong:  cangzhou
+      song_jiang: yunzhou
+      lu_zhishen: daming
+      wu_yong:    liangshan
+      lu_junyi:   daming
+      wu_song:    dongping
+      li_kui:     jiangzhou
+      yan_qing:   daming
+      chai_jin:   cangzhou
+      hua_rong:   qingzhou
+      qin_ming:   qingzhou
+      gao_qiu:    bianjing
+      cai_jing:   bianjing
+      gao_yanei:  bianjing
+      tong_guan:  bianjing
+
+  # ══════════════════════════════════════════════════════════════
+  # 시나리오 2 — 1102년 강주의 혈서 (江州反詩)
+  # 핵심 사건: 송강의 반역시 사건 → 탈출 → 양산박 합류
+  # ══════════════════════════════════════════════════════════════
+  - id: scenario_1102
+    year: 1102
+    name_ko: "1102년 — 강주의 혈서"
+    name_zh: "宣和四年 — 江州反詩"
+    description: |
+      임충은 이미 양산박에 합류했으나 왕륜의 질투로 갈등이 깊다.
+      송강은 살인 사건으로 강주(江州)로 유배되어,
+      술집 벽에 반역시(反詩)를 쓰다 발각되어 처형 직전에 놓인다.
+      노지심은 서경 대상국사를 떠나 이룡산(二龍山)을 향하고 있다.
+      이규(李逵)와 장순(張順)이 강주에서 활약한다.
+    max_turns: 30
+    dynasty_stability: 82
+    playable_heroes:
+      - song_jiang
+      - lin_chong
+      - lu_zhishen
+      - wu_song
+      - li_kui
+    town_control:
+      imperial:
+        - bianjing
+        - daming
+        - cangzhou
+        - taiyuan
+        - zhending
+        - yanmen
+        - yanzhou
+        - xiangzhou
+        - yunzhou
+        - dongping
+        - dengzhou
+        - jizhou
+        - dongchang
+        - weizhou
+        - mengzhou
+        - huazhou
+        - yangzhou
+        - wuwei
+        - luzhou
+        - jiangzhou
+        - suzhou
+        - hangzhou
+      liangshan:
+        - liangshan
+      liao: []
+      jin: []
+      erlongshan: []
+      qingfeng: []
+    hero_starts:
+      lin_chong:   liangshan
+      song_jiang:  jiangzhou
+      lu_zhishen:  qingzhou
+      wu_yong:     liangshan
+      lu_junyi:    daming
+      wu_song:     qingzhou
+      li_kui:      jiangzhou
+      yan_qing:    daming
+      chai_jin:    cangzhou
+      hua_rong:    qingzhou
+      qin_ming:    qingzhou
+      zhang_shun:  jiangzhou
+      gao_qiu:     bianjing
+      cai_jing:    bianjing
+      tong_guan:   bianjing
+
+  # ══════════════════════════════════════════════════════════════
+  # 시나리오 3 — 1103년 영웅들의 집결 (群雄聚義)
+  # 핵심 사건: 108 호한 집결 시작 / 관군 토벌 시작
+  # ══════════════════════════════════════════════════════════════
+  - id: scenario_1103
+    year: 1103
+    name_ko: "1103년 — 영웅들의 집결"
+    name_zh: "宣和五年 — 群雄聚義"
+    description: |
+      송강이 양산박의 새 수령으로 추대되어 각지에서 호걸을 불러 모은다.
+      노준의(盧俊義)도 음모에 빠져 양산박에 합류하게 될 운명이다.
+      고구는 대군을 편성해 첫 대규모 토벌전을 준비 중이다.
+      양산박은 주변 기주(濟州)까지 세력을 확장하기 시작한다.
+    max_turns: 35
+    dynasty_stability: 72
+    playable_heroes:
+      - song_jiang
+      - lu_junyi
+      - wu_yong
+      - lin_chong
+      - wu_song
+    town_control:
+      imperial:
+        - bianjing
+        - daming
+        - cangzhou
+        - taiyuan
+        - zhending
+        - yanmen
+        - yanzhou
+        - xiangzhou
+        - dongping
+        - dengzhou
+        - dongchang
+        - weizhou
+        - mengzhou
+        - huazhou
+        - yangzhou
+        - wuwei
+        - luzhou
+        - jiangzhou
+        - suzhou
+        - hangzhou
+      liangshan:
+        - liangshan
+        - jizhou
+        - yunzhou
+      liao: []
+      jin: []
+      erlongshan:
+        - qingzhou
+      qingfeng: []
+    hero_starts:
+      lin_chong:  liangshan
+      song_jiang: liangshan
+      lu_zhishen: liangshan
+      wu_yong:    liangshan
+      lu_junyi:   liangshan
+      wu_song:    liangshan
+      li_kui:     liangshan
+      yan_qing:   liangshan
+      chai_jin:   cangzhou
+      hua_rong:   liangshan
+      qin_ming:   bianjing
+      zhang_shun: liangshan
+      gao_qiu:    bianjing
+      cai_jing:   bianjing
+      tong_guan:  bianjing
+      huyan_zhuo: bianjing
+
+  # ══════════════════════════════════════════════════════════════
+  # 시나리오 4 — 1105년 천강성 108한 (一百單八將)
+  # 핵심 사건: 108 호한 완성 / 금나라 남침 / 방랍의 난
+  # ══════════════════════════════════════════════════════════════
+  - id: scenario_1105
+    year: 1105
+    name_ko: "1105년 — 천강성 108한"
+    name_zh: "宣和七年 — 一百單八將"
+    description: |
+      천강성(天罡星) 36인, 지살성(地煞星) 72인, 총 108명의 호한이
+      양산박에 집결하여 산동 일대를 장악하고 있다.
+      고구의 대군과 전면전이 벌어지고, 북방에서는 금나라가 움직인다.
+      남방에서는 방랍(方臘)이 항주(杭州)를 중심으로 반란 중이다.
+      이제 운명의 결전 — 천하를 제패하라.
+    max_turns: 45
+    dynasty_stability: 55
+    playable_heroes:
+      - song_jiang
+      - lu_junyi
+      - wu_yong
+      - lin_chong
+      - wu_song
+      - li_kui
+      - lu_zhishen
+    town_control:
+      imperial:
+        - bianjing
+        - cangzhou
+        - taiyuan
+        - zhending
+        - yanzhou
+        - xiangzhou
+        - dongping
+        - dengzhou
+        - weizhou
+        - mengzhou
+        - huazhou
+        - yangzhou
+        - wuwei
+        - luzhou
+        - jiangzhou
+        - suzhou
+      liangshan:
+        - liangshan
+        - jizhou
+        - yunzhou
+        - dongchang
+        - qingzhou
+        - daming
+      jin:
+        - yanmen
+      liao: []
+      erlongshan: []
+      qingfeng: []
+    hero_starts:
+      lin_chong:  liangshan
+      song_jiang: liangshan
+      lu_zhishen: liangshan
+      wu_yong:    liangshan
+      lu_junyi:   liangshan
+      wu_song:    liangshan
+      li_kui:     liangshan
+      yan_qing:   liangshan
+      chai_jin:   liangshan
+      hua_rong:   liangshan
+      qin_ming:   bianjing
+      zhang_shun: liangshan
+      huyan_zhuo: bianjing
+      gao_qiu:    bianjing
+      cai_jing:   bianjing
+      tong_guan:  bianjing
+      aguda:      yanmen

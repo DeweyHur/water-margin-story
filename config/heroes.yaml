@@ -1,4 +1,8 @@
 heroes:
+  # ════════════════════════════════════════════
+  # 天罡星 36人 — 천강성
+  # ════════════════════════════════════════════
+
   - id: song_jiang
     name_ko: 송강
     name_zh: 宋江
@@ -7,12 +11,12 @@ heroes:
     strength: 4
     intelligence: 9
     agility: 5
-    reputation: 90
-    faction_id: liangshan
+    reputation: 85
+    faction_id: neutral
     leadership: 10
     loyalty: 100
-    skills: ["leadership_aura", "righteous_call"]
-    description: "108 호한의 수령. 천강성 첫째. 의리로 호걸을 모은다."
+    skills: ["righteous_call", "leadership_aura", "pardon_plea"]
+    description: "천강성 첫째. 운성(鄆城)의 서리(書吏). 의리로 천하 호걸을 끌어당기는 인물."
 
   - id: lu_junyi
     name_ko: 노준의
@@ -22,12 +26,12 @@ heroes:
     strength: 10
     intelligence: 7
     agility: 7
-    reputation: 85
-    faction_id: liangshan
+    reputation: 80
+    faction_id: neutral
     leadership: 9
     loyalty: 90
-    skills: ["unrivaled_might", "spear_master"]
-    description: "천강성 둘째. 북경 최고의 무장."
+    skills: ["unrivaled_might", "spear_master", "merchant_network"]
+    description: "천강성 둘째. 북경대명부(大名府) 최고의 무장·거상. 봉황 창술의 달인."
 
   - id: wu_yong
     name_ko: 오용
@@ -37,12 +41,42 @@ heroes:
     strength: 2
     intelligence: 10
     agility: 5
-    reputation: 80
+    reputation: 70
     faction_id: liangshan
     leadership: 8
     loyalty: 100
-    skills: ["chain_stratagem", "weather_control"]
-    description: "천강성 셋째. 양산박의 군사. 지략이 뛰어나다."
+    skills: ["chain_stratagem", "ambush_plan", "spy_network"]
+    description: "천강성 셋째. 양산박 군사(軍師). 계략이 귀신같다."
+
+  - id: gongsun_sheng
+    name_ko: 공손승
+    name_zh: 公孫勝
+    nickname: 入雲龍 (입운룡)
+    hero_class: strategist
+    strength: 5
+    intelligence: 9
+    agility: 6
+    reputation: 65
+    faction_id: neutral
+    leadership: 6
+    loyalty: 80
+    skills: ["thunder_magic", "rain_call", "taoist_arts"]
+    description: "천강성 넷째. 도교 방술을 익힌 도사. 뇌법(雷法)을 사용해 전장을 제압한다."
+
+  - id: guan_sheng
+    name_ko: 관승
+    name_zh: 關勝
+    nickname: 大刀 (대도)
+    hero_class: warrior
+    strength: 9
+    intelligence: 6
+    agility: 6
+    reputation: 70
+    faction_id: imperial
+    leadership: 8
+    loyalty: 90
+    skills: ["blade_dance", "cavalry_charge", "suppress_rebels"]
+    description: "천강성 다섯째. 관우의 후손을 자처하는 청주 관군 대장."
 
   - id: lin_chong
     name_ko: 임충
@@ -52,72 +86,102 @@ heroes:
     strength: 9
     intelligence: 6
     agility: 8
-    reputation: 75
-    faction_id: liangshan
+    reputation: 72
+    faction_id: neutral
     leadership: 8
     loyalty: 85
-    skills: ["serpent_spear", "cavalry_charge"]
-    description: "천강성 여섯째. 전 80만 금군 교두. 고구의 모략으로 몰락했다."
+    skills: ["serpent_spear", "cavalry_charge", "outlaw_rage"]
+    description: "천강성 여섯째. 전 80만 금군 교두(敎頭). 고구의 아들이 처를 탐해 모략으로 쫓겨나 창주(滄州)로 유배됐다. 분노가 임계점에 달해 있다."
 
-  - id: gao_qiu
-    name_ko: 고구
-    name_zh: 高俅
-    nickname: 太尉 (태위)
-    hero_class: rogue
-    strength: 3
-    intelligence: 8
-    agility: 6
-    reputation: 10
+  - id: qin_ming
+    name_ko: 진명
+    name_zh: 秦明
+    nickname: 霹靂火 (벽력화)
+    hero_class: warrior
+    strength: 9
+    intelligence: 4
+    agility: 7
+    reputation: 65
     faction_id: imperial
     leadership: 7
-    loyalty: 100
-    skills: ["corruption", "imperial_edict"]
-    description: "북송의 간신. 축구 실력으로 황제의 총애를 얻어 권력을 휘두른다."
+    loyalty: 85
+    skills: ["thunderstrike", "berserker_rush", "wolf_mace"]
+    description: "천강성 일곱째. 청주 부장. 불같은 성격에 낭아봉(狼牙棒)을 휘두른다."
 
-  - id: cai_jing
-    name_ko: 채경
-    name_zh: 蔡京
-    nickname: 太師 (태사)
-    hero_class: strategist
-    strength: 2
-    intelligence: 9
-    agility: 4
-    reputation: 15
+  - id: huyan_zhuo
+    name_ko: 호연작
+    name_zh: 呼延灼
+    nickname: 雙鞭 (쌍편)
+    hero_class: warrior
+    strength: 8
+    intelligence: 5
+    agility: 7
+    reputation: 68
+    faction_id: imperial
+    leadership: 8
+    loyalty: 90
+    skills: ["twin_whips", "iron_cavalry", "army_drill"]
+    description: "천강성 여덟째. 개국 명장 호연찬의 후손. 연환마(連環馬) 전술로 유명하다."
+
+  - id: hua_rong
+    name_ko: 화영
+    name_zh: 花榮
+    nickname: 小李廣 (소이광)
+    hero_class: ranger
+    strength: 7
+    intelligence: 7
+    agility: 9
+    reputation: 70
     faction_id: imperial
     leadership: 6
-    loyalty: 100
-    skills: ["tax_extortion", "political_intrigue"]
-    description: "북송의 권신. 고구와 함께 조정을 부패시킨 주역."
+    loyalty: 80
+    skills: ["eagle_eye", "rapid_arrow", "mounted_archery"]
+    description: "천강성 아홉째. 청주 군장(郡將). 활 솜씨가 명장 이광(李廣)에 비유된다."
 
-  - id: aguda
-    name_ko: 아골타
-    name_zh: 阿骨打
-    nickname: 太祖 (태조)
+  - id: chai_jin
+    name_ko: 시진
+    name_zh: 柴進
+    nickname: 小旋風 (소선풍)
+    hero_class: rogue
+    strength: 5
+    intelligence: 7
+    agility: 6
+    reputation: 75
+    faction_id: neutral
+    leadership: 6
+    loyalty: 90
+    skills: ["noble_network", "harbor_fugitive", "big_purse"]
+    description: "천강성 열째. 후주(後周) 황실의 후손. 창주 인근의 시가장(柴家莊)에서 천하 호걸을 대접한다."
+
+  - id: li_ying
+    name_ko: 이응
+    name_zh: 李應
+    nickname: 撲天雕 (박천조)
     hero_class: warrior
-    strength: 10
-    intelligence: 8
-    agility: 7
-    reputation: 50
-    faction_id: jin
-    leadership: 10
-    loyalty: 100
-    skills: ["iron_cavalry", "conquest"]
-    description: "금나라의 건국자. 강력한 기병을 이끌고 중원을 위협한다."
-
-  - id: wu_song
-    name_ko: 무송
-    name_zh: 武松
-    nickname: 行者 (행자)
-    hero_class: ranger
-    strength: 10
+    strength: 7
     intelligence: 6
-    agility: 10
-    reputation: 80
-    faction_id: liangshan
-    leadership: 5
-    loyalty: 95
-    skills: ["tiger_slayer", "drunk_fist"]
-    description: "천강성 열넷째. 호랑이를 맨손으로 잡은 전설의 무장."
+    agility: 6
+    reputation: 55
+    faction_id: neutral
+    leadership: 7
+    loyalty: 85
+    skills: ["estate_guard", "hidden_dart", "logistics"]
+    description: "천강성 열한째. 독룡강(獨龍岡) 이가장(李家莊)의 장원주. 재산이 넉넉하고 무예도 출중하다."
+
+  - id: zhu_tong
+    name_ko: 주동
+    name_zh: 朱仝
+    nickname: 美髥公 (미염공)
+    hero_class: warrior
+    strength: 8
+    intelligence: 6
+    agility: 6
+    reputation: 60
+    faction_id: imperial
+    leadership: 7
+    loyalty: 75
+    skills: ["dignified_bear", "prison_break", "gallop_charge"]
+    description: "천강성 열두째. 운성현 도두(都頭). 풍채가 좋고 의리 있어 뇌횡(雷橫)과 함께 일한다."
 
   - id: lu_zhishen
     name_ko: 노지심
@@ -127,12 +191,31 @@ heroes:
     strength: 9
     intelligence: 5
     agility: 6
-    reputation: 80
-    faction_id: liangshan
+    reputation: 78
+    faction_id: neutral
     leadership: 6
     loyalty: 90
-    skills: ["uproot_tree", "staff_master"]
-    description: "천강성 열셋째. 의협심 강한 승려 출신 무장."
+    skills: ["iron_staff", "uproot_willow", "zen_fury"]
+    description: "천강성 열셋째. 위주(渭州) 군관 출신 승려. 의협심이 강해 불의를 못 참는다. 임충의 절친한 벗."
+
+  - id: wu_song
+    name_ko: 무송
+    name_zh: 武松
+    nickname: 行者 (행자)
+    hero_class: ranger
+    strength: 10
+    intelligence: 6
+    agility: 10
+    reputation: 75
+    faction_id: neutral
+    leadership: 5
+    loyalty: 95
+    skills: ["tiger_slayer", "drunk_fist", "dual_blades"]
+    description: "천강성 열넷째. 양곡현(陽谷縣) 기묘에서 맨손으로 호랑이를 죽인 영웅."
+
+  # ════════════════════════════════════════════
+  # 地煞星 72人 — 지살성 (일부)
+  # ════════════════════════════════════════════
 
   - id: li_kui
     name_ko: 이규
@@ -142,12 +225,12 @@ heroes:
     strength: 10
     intelligence: 2
     agility: 5
-    reputation: 60
-    faction_id: liangshan
+    reputation: 55
+    faction_id: neutral
     leadership: 4
     loyalty: 100
-    skills: ["berserk", "twin_axes"]
-    description: "천강성 스물둘째. 쌍도끼를 쓰는 용맹한 흑인 호한."
+    skills: ["berserk", "twin_axes", "unstoppable"]
+    description: "지살성 여덟째. 강주(江州) 감옥 나졸. 쌍도끼를 쓰는 무쌍의 호한. 오직 송강만 따른다."
 
   - id: yan_qing
     name_ko: 연청
@@ -157,9 +240,155 @@ heroes:
     strength: 7
     intelligence: 8
     agility: 10
-    reputation: 70
-    faction_id: liangshan
+    reputation: 68
+    faction_id: neutral
     leadership: 4
     loyalty: 95
-    skills: ["wrestling", "infiltration"]
-    description: "지살성 여섯째. 아름다운 외모와 뛰어난 정보 수집 능력."
+    skills: ["wrestling_master", "infiltrate", "crossbow_ace"]
+    description: "지살성 여섯째. 노준의의 심복 종복. 용모가 출중하고 레슬링(相撲)을 잘한다."
+
+  - id: zhang_shun
+    name_ko: 장순
+    name_zh: 張順
+    nickname: 浪裏白條 (낭리백조)
+    hero_class: ranger
+    strength: 6
+    intelligence: 5
+    agility: 10
+    reputation: 55
+    faction_id: neutral
+    leadership: 4
+    loyalty: 90
+    skills: ["river_swim", "water_ambush", "fish_merchant"]
+    description: "지살성 스물셋째. 수중전(水中戰)의 명수. 강주 근처에서 어부로 위장하고 있다."
+
+  - id: song_qing
+    name_ko: 송청
+    name_zh: 宋淸
+    nickname: 鐵扇子 (철선자)
+    hero_class: strategist
+    strength: 3
+    intelligence: 6
+    agility: 4
+    reputation: 45
+    faction_id: neutral
+    leadership: 5
+    loyalty: 100
+    skills: ["logistic_master", "army_cook", "morale_boost"]
+    description: "지살성 이십일째. 송강의 동생. 양산박 병참(兵站)을 담당한다."
+
+  - id: lei_heng
+    name_ko: 뇌횡
+    name_zh: 雷橫
+    nickname: 插翅虎 (삽시호)
+    hero_class: warrior
+    strength: 8
+    intelligence: 5
+    agility: 6
+    reputation: 55
+    faction_id: imperial
+    leadership: 6
+    loyalty: 70
+    skills: ["iron_rod", "night_patrol", "jailbreak"]
+    description: "지살성 열셋째. 운성현 도두. 주동과 함께 현청을 지킨다."
+
+  # ════════════════════════════════════════════
+  # 적대 세력 — 고구·간신·관료
+  # ════════════════════════════════════════════
+
+  - id: gao_qiu
+    name_ko: 고구
+    name_zh: 高俅
+    nickname: 太尉 (태위)
+    hero_class: rogue
+    strength: 3
+    intelligence: 8
+    agility: 6
+    reputation: 5
+    faction_id: imperial
+    leadership: 7
+    loyalty: 100
+    skills: ["corruption", "imperial_edict", "frame_hero", "sycophancy"]
+    description: "북송의 대간신. 축구(蹴鞠) 솜씨 하나로 황제의 총애를 얻어 태위(太尉)가 됐다. 임충을 음해한 원흉."
+
+  - id: cai_jing
+    name_ko: 채경
+    name_zh: 蔡京
+    nickname: 太師 (태사)
+    hero_class: strategist
+    strength: 2
+    intelligence: 9
+    agility: 4
+    reputation: 8
+    faction_id: imperial
+    leadership: 6
+    loyalty: 100
+    skills: ["tax_extortion", "political_intrigue", "calligraphy_edict"]
+    description: "북송의 권신. 고구와 함께 조정을 부패시킨 사대간신(四大奸臣)의 수괴."
+
+  - id: tong_guan
+    name_ko: 동관
+    name_zh: 童貫
+    nickname: 樞密使 (추밀사)
+    hero_class: warrior
+    strength: 6
+    intelligence: 7
+    agility: 5
+    reputation: 10
+    faction_id: imperial
+    leadership: 8
+    loyalty: 95
+    skills: ["eunuch_general", "western_campaign", "suppress_rebels"]
+    description: "환관(宦官)으로 군권(軍權)을 잡은 추밀사. 방랍(方臘) 원정을 이끈다."
+
+  - id: gao_yanei
+    name_ko: 고아내
+    name_zh: 高衙內
+    nickname: 花花太歲 (화화태세)
+    hero_class: rogue
+    strength: 4
+    intelligence: 3
+    agility: 5
+    reputation: 2
+    faction_id: imperial
+    leadership: 2
+    loyalty: 100
+    skills: ["imperial_bully", "lust", "backstab"]
+    description: "고구의 양아들. 임충의 처를 탐하다가 임충을 모함해 유배시킨 장본인."
+
+  # ════════════════════════════════════════════
+  # 외부 세력 수장
+  # ════════════════════════════════════════════
+
+  - id: aguda
+    name_ko: 아골타
+    name_zh: 阿骨打
+    nickname: 金太祖 (금태조)
+    hero_class: warrior
+    strength: 10
+    intelligence: 8
+    agility: 7
+    reputation: 60
+    faction_id: jin
+    leadership: 10
+    loyalty: 100
+    skills: ["iron_cavalry", "northern_conquest", "united_tribes"]
+    description: "금나라(大金)의 건국자. 1115년 제위에 올라 요(遼)를 멸망시키고 남진(南進)한다."
+
+  - id: liao_emperor
+    name_ko: 요 천조제
+    name_zh: 天祚帝
+    nickname: 遼主 (요주)
+    hero_class: rogue
+    strength: 4
+    intelligence: 5
+    agility: 5
+    reputation: 30
+    faction_id: liao
+    leadership: 5
+    loyalty: 80
+    skills: ["diplomatic_flee", "false_alliance"]
+    description: "요나라 말기 황제. 금나라의 공세에 밀려 세력이 급속히 약화되고 있다."
+
+
+

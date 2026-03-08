@@ -1,33 +1,114 @@
 factions:
+  # ══════════════════════════════════════════════════════════════
+  # 북송 관군 — 고구(高俅)가 실권을 쥔 황실 세력
+  # ══════════════════════════════════════════════════════════════
+  - id: imperial
+    name_ko: 북송 관군
+    name_zh: 北宋官軍
+    leader_id: gao_qiu
+    gold: 30000
+    food: 25000
+    prestige: 600
+    controlled_towns: []   # overridden per scenario
+    color: bright_red
+    relations:
+      liangshan:  -100
+      liao:        -60
+      jin:         -80
+      erlongshan:  -80
+      qingfeng:    -60
+
+  # ══════════════════════════════════════════════════════════════
+  # 양산박 — 수호 108 호한의 근거지
+  # ══════════════════════════════════════════════════════════════
   - id: liangshan
     name_ko: 양산박
+    name_zh: 梁山泊
     leader_id: song_jiang
     gold: 2000
     food: 5000
-    prestige: 100
-    controlled_towns: [liangshan]
+    prestige: 60
+    controlled_towns: []   # overridden per scenario
+    color: bright_green
     relations:
-      imperial: -100
-      jin: -50
+      imperial:   -100
+      liao:        -50
+      jin:         -70
+      erlongshan:   40
+      qingfeng:     30
 
-  - id: imperial
-    name_ko: 관군 (북송)
-    leader_id: gao_qiu
-    gold: 20000
-    food: 20000
-    prestige: 500
-    controlled_towns: [bianjing, daming, jizhou, yunzhou, dongping, dongchang, cangzhou, taiyuan, jiangzhou, huazhou, qingzhou, dengzhou, mengzhou, weizhou, hangzhou, suzhou, yangzhou, luzhou, jingnan]
+  # ══════════════════════════════════════════════════════════════
+  # 요나라 (遼) — 북방 강국, 1125년 금나라에 멸망
+  # ══════════════════════════════════════════════════════════════
+  - id: liao
+    name_ko: 요나라
+    name_zh: 大遼
+    leader_id: liao_emperor
+    gold: 8000
+    food: 8000
+    prestige: 400
+    controlled_towns: []
+    color: cyan
     relations:
-      liangshan: -100
-      jin: -80
+      imperial:   -60
+      liangshan:  -50
+      jin:        -90
+      erlongshan: -30
+      qingfeng:   -20
 
+  # ══════════════════════════════════════════════════════════════
+  # 금나라 (金) — 여진족 신흥 강국, 1125년 이후 남침
+  # ══════════════════════════════════════════════════════════════
   - id: jin
     name_ko: 금나라
+    name_zh: 大金
     leader_id: aguda
-    gold: 10000
+    gold: 12000
     food: 10000
-    prestige: 300
+    prestige: 350
     controlled_towns: []
+    color: yellow
     relations:
-      imperial: -80
-      liangshan: -50
+      imperial:   -80
+      liangshan:  -70
+      liao:       -90
+      erlongshan: -40
+      qingfeng:   -30
+
+  # ══════════════════════════════════════════════════════════════
+  # 이룡산채 — 청주 근방 이룡산 산적 (노지심·무송 거점)
+  # ══════════════════════════════════════════════════════════════
+  - id: erlongshan
+    name_ko: 이룡산채
+    name_zh: 二龍山寨
+    leader_id: lu_zhishen
+    gold: 800
+    food: 2000
+    prestige: 30
+    controlled_towns: []
+    color: bright_blue
+    relations:
+      imperial:   -80
+      liangshan:   40
+      liao:       -20
+      jin:        -40
+      qingfeng:    50
+
+  # ══════════════════════════════════════════════════════════════
+  # 청풍산채 — 소규모 산채 (초기 독립 세력)
+  # ══════════════════════════════════════════════════════════════
+  - id: qingfeng
+    name_ko: 청풍산채
+    name_zh: 靑風山寨
+    leader_id: qing_leader
+    gold: 400
+    food: 1000
+    prestige: 15
+    controlled_towns: []
+    color: magenta
+    relations:
+      imperial:   -60
+      liangshan:   30
+      liao:       -10
+      jin:        -30
+      erlongshan:  50

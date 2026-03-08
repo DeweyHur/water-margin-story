@@ -40,31 +40,67 @@ def _select(message: str, choices: list[str], display: list[str] | None = None) 
 class TerminalUI:
     """Rich + questionary 터미널 UI."""
 
-    # Grid coordinates (col, row) — geographically approximate
+    # ─── Grid (col, row): col = west→east, row = north→south ───────────────
     _COORDS: dict[str, tuple[int, int]] = {
-        "weizhou":   (0, 1), "taiyuan":   (3, 0), "cangzhou":  (6, 0),
-        "daming":    (5, 1),
-        "liangshan": (1, 3), "yunzhou":   (3, 3), "jizhou":    (5, 3),
-        "qingzhou":  (7, 3), "dengzhou":  (9, 3),
-        "dongping":  (1, 4), "dongchang": (5, 4),
-        "mengzhou":  (2, 5),
-        "bianjing":  (5, 6),
-        "huazhou":   (5, 7),
-        "jiangzhou": (5, 9), "yangzhou":  (7, 9),
-        "hangzhou":  (7, 10), "suzhou":   (9, 10),
-        "luzhou":    (6, 11),
-        "jingnan":   (4, 12),
+        # Row 0 — 금/요 북방 접경
+        "yanmen":    (5,  0),
+        # Row 1 — 하북 / 산서
+        "taiyuan":   (3,  1),
+        "zhending":  (8,  1),
+        "daming":    (10, 1),
+        "cangzhou":  (12, 1),
+        # Row 2 — 중북부 / 산동
+        "weizhou":   (0,  2),
+        "yanzhou":   (2,  2),
+        "xiangzhou": (6,  2),
+        "yunzhou":   (11, 2),
+        "dongping":  (12, 2),
+        "qingzhou":  (13, 2),
+        "dengzhou":  (15, 2),
+        # Row 3 — 수도권 / 양산박
+        "mengzhou":  (2,  3),
+        "bianjing":  (6,  3),
+        "liangshan": (11, 3),
+        "jizhou":    (12, 3),
+        "dongchang": (13, 3),
+        # Row 4 — 화이허 이남
+        "huazhou":   (1,  4),
+        # Row 6 — 양쯔강 북안
+        "yangzhou":  (13, 6),
+        # Row 7-8 — 강남
+        "luzhou":    (10, 7),
+        "wuwei":     (11, 7),
+        "suzhou":    (14, 7),
+        "jiangzhou": (10, 8),
+        "hangzhou":  (14, 8),
     }
     _SHORT: dict[str, str] = {
-        "weizhou": "위주", "taiyuan": "태원", "cangzhou": "창주",
-        "daming": "대명", "liangshan": "梁山", "yunzhou": "운주",
-        "jizhou": "기주", "dongping": "동평", "qingzhou": "청주",
-        "dengzhou": "등주", "dongchang": "동창", "bianjing": "변경",
-        "mengzhou": "맹주", "huazhou": "화주", "jiangzhou": "강주",
-        "hangzhou": "항주", "suzhou": "소주", "yangzhou": "양주",
-        "luzhou": "노주", "jingnan": "형남",
+        "yanmen":    "雁門",
+        "taiyuan":   "太原",
+        "zhending":  "真定",
+        "daming":    "大名",
+        "cangzhou":  "滄州",
+        "weizhou":   "渭州",
+        "yanzhou":   "延州",
+        "xiangzhou": "相州",
+        "yunzhou":   "鄆城",
+        "dongping":  "東平",
+        "qingzhou":  "靑州",
+        "dengzhou":  "登州",
+        "mengzhou":  "孟州",
+        "bianjing":  "汴京",
+        "liangshan": "梁山",
+        "jizhou":    "濟州",
+        "dongchang": "東昌",
+        "huazhou":   "華州",
+        "yangzhou":  "揚州",
+        "luzhou":    "廬州",
+        "wuwei":     "無為",
+        "jiangzhou": "江州",
+        "suzhou":    "蘇州",
+        "hangzhou":  "杭州",
     }
-    _TYPE_ICON = {"village": "마을", "fortress": "요새", "metropolis": "대도시"}
+    _TYPE_ICON = {"village": "縣", "fortress": "寨", "metropolis": "府"}
 
     def __init__(self) -> None:
         self.console = Console()
@@ -72,10 +108,40 @@ class TerminalUI:
     def show_title(self) -> None:
         self.console.clear()
         self.console.print(Panel.fit(
-            "[bold red]수호지: 북송의 황혼 (Water Margin: Strategy Simulation)[/]\n"
-            "[yellow]전략 시뮬레이션 확장판[/]",
-            subtitle="v2.0 Strategy Update"
+            "[bold red]水滸傳 — 수호지: 북송의 황혼[/]\n"
+            "[yellow]108 호한의 합종연횡 전략 시뮬레이션[/]",
+            subtitle="Water Margin: Strategy Simulation  v2.0"
         ))
+
+    def choose_scenario(self, scenarios: list[dict]) -> dict:
+        """Full-screen scenario selection before hero pick."""
+        self.console.clear()
+        self.console.print(Panel.fit(
+            "[bold red]水滸傳[/]  [yellow]시나리오 선택[/]\n"
+            "[dim]역사적 사건을 바탕으로 한 4개의 시나리오[/]",
+            border_style="yellow"
+        ))
+        ids = [s["id"] for s in scenarios]
+        display = [
+            f"[{s['year']}년]  {s['name_ko']}  —  "
+            f"{s['description'].strip().split(chr(10))[0].strip()[:40]}"
+            for s in scenarios
+        ]
+        chosen_id = _select("시나리오 선택 (↑↓ + Enter)", ids, display)
+        chosen = next(s for s in scenarios if s["id"] == chosen_id)
+
+        # Show scenario detail
+        self.console.clear()
+        hint = chosen.get("background_hint", "")
+        self.console.print(Panel(
+            f"[bold yellow]{chosen['name_ko']}[/]\n\n"
+            f"[white]{chosen['description'].strip()}[/]\n\n"
+            + (f"[dim]{hint.strip()}[/]" if hint else ""),
+            title=f"[bold red]{chosen['year']}년 시나리오",
+            border_style="yellow",
+        ))
+        input("\n  [ Enter ] 키를 눌러 영웅 선택으로 이동... ")
+        return chosen
 
     def choose_hero(self, heroes: list[Hero]) -> Hero:
         self.console.clear()
@@ -230,10 +296,11 @@ class TerminalUI:
                 style = "bold black on bright_yellow"
             elif tid == hero_current_town_id:
                 style = "bold black on yellow"
-            elif t.controlled_by_faction == "liangshan":
-                style = "bright_green"
             else:
-                style = "bright_red"
+                fid = t.controlled_by_faction or ""
+                faction_obj = state.factions.get(fid)
+                fc = faction_obj.color if faction_obj else "white"
+                style = fc if fc.startswith("bright") else fc
 
             x = cx
             for ch in label:
@@ -266,27 +333,7 @@ class TerminalUI:
         self.console.print("─" * 52)
 
     def choose_action(self, hero: Hero, state: GameState) -> str:
-        self.console.clear()
-        # 턴 헤더 재출력 (clear 후 항상 보이도록)
-        self.console.rule(f"[bold yellow]제 {state.turn} 턴 (남은 턴: {state.turns_remaining()})[/]")
-        faction = state.factions.get(hero.faction_id)
-        if faction:
-            status = (
-                f"[bold]세력:[/] {faction.name_ko} | "
-                f"[bold]금전:[/] {faction.gold} | [bold]군량:[/] {faction.food} | "
-                f"[bold]명성:[/] {faction.prestige} | [bold]안정도:[/] {state.dynasty_stability}"
-            )
-            self.console.print(Panel(status, border_style="blue"))
-
-        town = state.towns[hero.current_town]
-        self.console.print(
-            f"[bold cyan]{hero.name_ko}[/] "
-            f"(위치: {town.name_ko}, 병력: {hero.current_army},"
-            f" AP: {hero.action_points})"
-        )
-
-        self._render_static_map(state, hero.current_town, highlight_town_id=None)
-
+        """Full-screen action selector: left = info + action list, right = 2D map."""
         choices = [
             ("move",        "이동       — 인접 지역으로 이동"),
             ("investigate", "조사       — 현재 마을 탐문"),
@@ -296,9 +343,112 @@ class TerminalUI:
             ("map",         "지도       — 거점 정보 확인 (AP 소모 없음)"),
             ("end",         "턴 종료    — 다음 턴으로"),
         ]
-        ids = [c[0] for c in choices]
-        display = [f"{c[0]:12} {c[1]}" for c in choices]
-        return _select("행동을 선택하세요 (↑↓ + Enter)", ids, display)
+
+        cursor = [0]
+        result: list[str] = [choices[0][0]]
+        faction = state.factions.get(hero.faction_id)
+        town = state.towns[hero.current_town]
+
+        _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
+        town_by_id = {t.id: t for t in state.towns.values()}
+
+        def left_text() -> list[tuple[str, str]]:
+            fname = faction.name_ko if faction else "?"
+            lines: list[tuple[str, str]] = [
+                ("bold fg:ansiyellow", f" 제 {state.turn} 턴  (남은: {state.turns_remaining()})\n"),
+                ("", "─" * 28 + "\n"),
+                ("bold fg:ansicyan", f" {hero.name_ko}\n"),
+                ("", f" 위치  : {town.name_ko}\n"),
+                ("", f" 세력  : {fname}\n"),
+            ]
+            if faction:
+                lines += [
+                    ("", f" 금전  : {faction.gold}   군량: {faction.food}\n"),
+                    ("", f" 명성  : {faction.prestige}   안정도: {state.dynasty_stability}\n"),
+                ]
+            lines += [
+                ("", f" 병력  : {hero.current_army}  AP: {hero.action_points}\n"),
+                ("", "─" * 28 + "\n"),
+                ("bold underline", " 행동 선택\n"),
+                ("", "─" * 28 + "\n"),
+            ]
+            for i, (cid, desc) in enumerate(choices):
+                if i == cursor[0]:
+                    lines.append(("bold fg:ansiyellow reverse", f" ▶ {desc}\n"))
+                else:
+                    lines.append(("", f"   {desc}\n"))
+            lines += [("", "\n"), ("fg:ansibrightblack", " ↑↓이동  Enter선택")]
+            return lines
+
+        def map_text() -> list[tuple[str, str]]:
+            lines: list[tuple[str, str]] = [
+                ("bold underline", " 전략 지도  (북→남 / 서→동)\n"),
+                ("", "─" * 52 + "\n"),
+            ]
+            for row in range(_max_row + 1):
+                lines.append(("", "  "))
+                for col in range(_max_col + 1):
+                    tid = _coord_to_id.get((col, row))
+                    if tid is None:
+                        lines.append(("", "       "))
+                    else:
+                        short = self._SHORT.get(tid, tid[:2])
+                        t = town_by_id[tid]
+                        if tid == hero.current_town:
+                            style = "bold fg:ansiblack bg:ansiyellow"
+                        else:
+                            fid = t.controlled_by_faction or ""
+                            faction_obj = state.factions.get(fid)
+                            fc = faction_obj.color if faction_obj else "white"
+                            _ptk = {
+                                "bright_green":  "fg:ansibrightgreen",
+                                "bright_red":    "fg:ansibrightred",
+                                "bright_blue":   "fg:ansibrightblue",
+                                "bright_yellow":  "fg:ansibrightyellow",
+                                "cyan":          "fg:ansicyan",
+                                "yellow":        "fg:ansiyellow",
+                                "magenta":       "fg:ansimagenta",
+                                "white":         "fg:ansiwhite",
+                            }
+                            style = _ptk.get(fc, "fg:ansiwhite")
+                        lines.append((style, f"[{short}]"))
+                        lines.append(("", "  "))
+                lines.append(("", "\n"))
+            return lines
+
+        kb = KeyBindings()
+
+        @kb.add("up")
+        def _up(event):
+            cursor[0] = (cursor[0] - 1) % len(choices)
+            event.app.invalidate()
+
+        @kb.add("down")
+        def _down(event):
+            cursor[0] = (cursor[0] + 1) % len(choices)
+            event.app.invalidate()
+
+        @kb.add("enter")
+        def _enter(event):
+            result[0] = choices[cursor[0]][0]
+            event.app.exit()
+
+        layout = Layout(
+            VSplit([
+                Window(content=FormattedTextControl(left_text), width=30),
+                Window(width=1, char="│"),
+                Window(content=FormattedTextControl(map_text)),
+            ])
+        )
+
+        Application(
+            layout=layout,
+            key_bindings=kb,
+            full_screen=True,
+            mouse_support=False,
+        ).run()
+
+        return result[0]
 
     def choose_destination(self, hero: Hero, town: Town, state: GameState) -> Optional[str]:
         self.console.clear()
@@ -403,10 +553,22 @@ class TerminalUI:
                         t = town_by_id[tid]
                         if tid == sel_id:
                             style = "bold fg:ansiblack bg:ansiyellow"
-                        elif t.controlled_by_faction == "liangshan":
-                            style = "fg:ansibrightgreen"
                         else:
-                            style = "fg:ansibrightred"
+                            fid = t.controlled_by_faction or ""
+                            faction_obj = state.factions.get(fid)
+                            fc = faction_obj.color if faction_obj else "white"
+                            # map Rich color names to prompt_toolkit ansi names
+                            _ptk = {
+                                "bright_green":  "fg:ansibrightgreen",
+                                "bright_red":    "fg:ansibrightred",
+                                "bright_blue":   "fg:ansibrightblue",
+                                "bright_yellow":  "fg:ansibrightyellow",
+                                "cyan":          "fg:ansicyan",
+                                "yellow":        "fg:ansiyellow",
+                                "magenta":       "fg:ansimagenta",
+                                "white":         "fg:ansiwhite",
+                            }
+                            style = _ptk.get(fc, "fg:ansiwhite")
                         lines.append((style, f"[{short}]"))
                         lines.append(("", "  "))        # 2-col separator
                 lines.append(("", "\n"))

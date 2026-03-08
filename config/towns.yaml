@@ -1,159 +1,203 @@
 towns:
-  - id: liangshan
-    name_ko: 양산박
-    name_zh: 梁山泊
+  # ══════════════════════════════════════════
+  # 북부 — 금/요 접경 지역
+  # ══════════════════════════════════════════
+
+  - id: yanmen
+    name_ko: 안문관
+    name_zh: 雁門關
     town_type: fortress
-    population: 5000
-    max_garrison: 10000
-    tax_yield: 50
-    food_yield: 200
-    defense_level: 5
-    adjacent: [jizhou, yunzhou, dongping]
-    garrison_strength: 5
-    controlled_by_faction: liangshan
-
-  - id: bianjing
-    name_ko: 변경 (개봉부)
-    name_zh: 汴京 (開封府)
-    town_type: metropolis
-    population: 50000
-    max_garrison: 50000
-    tax_yield: 1000
-    food_yield: 500
+    population: 4000
+    max_garrison: 8000
+    tax_yield: 80
+    food_yield: 100
     defense_level: 8
-    adjacent: [jizhou, dongchang, daming, taiyuan, huazhou]
-    garrison_strength: 10
-    controlled_by_faction: imperial
-
-  - id: daming
-    name_ko: 대명부
-    name_zh: 大名府
-    town_type: metropolis
-    population: 30000
-    max_garrison: 20000
-    tax_yield: 600
-    food_yield: 400
-    defense_level: 6
-    adjacent: [bianjing, taiyuan, cangzhou]
+    wall_hp: 160
+    max_wall_hp: 160
+    adjacent: [taiyuan, zhending]
     garrison_strength: 7
     controlled_by_faction: imperial
+    description: "북방 최대 관문. 금·요와의 국경 요새."
 
-  - id: jizhou
-    name_ko: 기주
-    name_zh: 濟州
-    town_type: village
-    population: 8000
-    max_garrison: 5000
-    tax_yield: 150
-    food_yield: 150
-    defense_level: 2
-    adjacent: [liangshan, yunzhou, dongchang, bianjing]
-    garrison_strength: 3
+  - id: taiyuan
+    name_ko: 태원부
+    name_zh: 太原府
+    town_type: metropolis
+    population: 18000
+    max_garrison: 15000
+    tax_yield: 350
+    food_yield: 250
+    defense_level: 7
+    wall_hp: 140
+    max_wall_hp: 140
+    adjacent: [yanmen, yanzhou, zhending, daming, weizhou]
+    garrison_strength: 6
     controlled_by_faction: imperial
 
-  - id: yunzhou
-    name_ko: 운주
-    name_zh: 鄆州
-    town_type: village
-    population: 7000
-    max_garrison: 4000
-    tax_yield: 120
-    food_yield: 180
-    defense_level: 2
-    adjacent: [liangshan, jizhou, dongping]
-    garrison_strength: 2
-    controlled_by_faction: imperial
-
-  - id: dongping
-    name_ko: 동평부
-    name_zh: 東平府
+  - id: zhending
+    name_ko: 진정부
+    name_zh: 真定府
     town_type: fortress
     population: 12000
-    max_garrison: 8000
-    tax_yield: 200
-    food_yield: 200
-    defense_level: 4
-    adjacent: [liangshan, yunzhou, dongchang]
-    garrison_strength: 4
-    controlled_by_faction: imperial
-
-  - id: dongchang
-    name_ko: 동창부
-    name_zh: 東昌府
-    town_type: village
-    population: 9000
-    max_garrison: 6000
-    tax_yield: 180
-    food_yield: 150
-    defense_level: 3
-    adjacent: [jizhou, dongping, bianjing]
-    garrison_strength: 3
+    max_garrison: 10000
+    tax_yield: 220
+    food_yield: 180
+    defense_level: 6
+    wall_hp: 120
+    max_wall_hp: 120
+    adjacent: [yanmen, taiyuan, daming, cangzhou]
+    garrison_strength: 5
     controlled_by_faction: imperial
 
   - id: cangzhou
     name_ko: 창주
     name_zh: 滄州
     town_type: village
-    population: 6000
-    max_garrison: 4000
+    population: 7000
+    max_garrison: 5000
     tax_yield: 100
-    food_yield: 120
+    food_yield: 130
     defense_level: 2
-    adjacent: [daming, taiyuan]
+    wall_hp: 60
+    max_wall_hp: 60
+    adjacent: [zhending, daming, yunzhou]
     garrison_strength: 2
     controlled_by_faction: imperial
+    description: "해안가 유배지. 임충(林沖)이 억울하게 이곳으로 유배됐다. 시진(柴進)의 시가장(柴家莊)이 인근에 있다."
 
-  - id: taiyuan
-    name_ko: 태원부
-    name_zh: 太原府
-    town_type: fortress
-    population: 15000
-    max_garrison: 15000
-    tax_yield: 300
-    food_yield: 200
-    defense_level: 7
-    adjacent: [bianjing, daming, cangzhou, weizhou]
-    garrison_strength: 6
-    controlled_by_faction: imperial
+  # ══════════════════════════════════════════
+  # 중북부 — 하북·산서 일대
+  # ══════════════════════════════════════════
 
-  - id: jiangzhou
-    name_ko: 강주
-    name_zh: 江州
+  - id: daming
+    name_ko: 대명부
+    name_zh: 大名府
     town_type: metropolis
-    population: 25000
-    max_garrison: 15000
-    tax_yield: 500
-    food_yield: 600
-    defense_level: 4
-    adjacent: [huazhou, hangzhou]
+    population: 32000
+    max_garrison: 20000
+    tax_yield: 650
+    food_yield: 420
+    defense_level: 7
+    wall_hp: 140
+    max_wall_hp: 140
+    adjacent: [taiyuan, zhending, cangzhou, xiangzhou, yunzhou]
+    garrison_strength: 7
+    controlled_by_faction: imperial
+    description: "北京대명부. 노준의(盧俊義)가 거부로 사는 북방 최대 도시 중 하나."
+
+  - id: yanzhou
+    name_ko: 연주
+    name_zh: 延州
+    town_type: fortress
+    population: 8000
+    max_garrison: 9000
+    tax_yield: 130
+    food_yield: 120
+    defense_level: 6
+    wall_hp: 120
+    max_wall_hp: 120
+    adjacent: [weizhou, taiyuan]
     garrison_strength: 5
     controlled_by_faction: imperial
+    description: "섬서(陝西) 북방의 요새. 서역과의 경계."
 
-  - id: huazhou
-    name_ko: 화주
-    name_zh: 華州
+  - id: xiangzhou
+    name_ko: 상주
+    name_zh: 相州
     town_type: village
-    population: 10000
-    max_garrison: 7000
-    tax_yield: 200
-    food_yield: 250
+    population: 9000
+    max_garrison: 6000
+    tax_yield: 160
+    food_yield: 170
     defense_level: 3
-    adjacent: [bianjing, jiangzhou, mengzhou]
+    wall_hp: 80
+    max_wall_hp: 80
+    adjacent: [daming, bianjing, mengzhou]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  # ══════════════════════════════════════════
+  # 산동 일대 — 수호전의 핵심 무대
+  # ══════════════════════════════════════════
+
+  - id: yunzhou
+    name_ko: 운성
+    name_zh: 鄆城
+    town_type: village
+    population: 8000
+    max_garrison: 4500
+    tax_yield: 130
+    food_yield: 190
+    defense_level: 2
+    wall_hp: 60
+    max_wall_hp: 60
+    adjacent: [daming, cangzhou, dongping, liangshan, jizhou]
+    garrison_strength: 2
+    controlled_by_faction: imperial
+    description: "송강(宋江)이 서리(書吏)로 일하는 작은 현(縣). 의협으로 이름난 거리."
+
+  - id: liangshan
+    name_ko: 양산박
+    name_zh: 梁山泊
+    town_type: fortress
+    population: 5000
+    max_garrison: 12000
+    tax_yield: 50
+    food_yield: 250
+    defense_level: 6
+    wall_hp: 100
+    max_wall_hp: 100
+    adjacent: [yunzhou, dongping, jizhou]
+    garrison_strength: 5
+    controlled_by_faction: liangshan
+    description: "거대한 늪지 위의 요새. 108 호한의 본거지. 수전(水戰)에 유리하다."
+
+  - id: jizhou
+    name_ko: 기주
+    name_zh: 濟州
+    town_type: village
+    population: 9000
+    max_garrison: 5500
+    tax_yield: 160
+    food_yield: 160
+    defense_level: 3
+    wall_hp: 70
+    max_wall_hp: 70
+    adjacent: [yunzhou, liangshan, dongping, dongchang]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  - id: dongping
+    name_ko: 동평부
+    name_zh: 東平府
+    town_type: fortress
+    population: 13000
+    max_garrison: 8500
+    tax_yield: 220
+    food_yield: 210
+    defense_level: 5
+    wall_hp: 100
+    max_wall_hp: 100
+    adjacent: [yunzhou, liangshan, jizhou, qingzhou]
     garrison_strength: 4
     controlled_by_faction: imperial
+    description: "산동 서부의 요충지. 무송(武松)이 경양강(景陽崗)에서 호랑이를 잡고 들른 곳."
 
   - id: qingzhou
     name_ko: 청주
     name_zh: 靑州
     town_type: fortress
-    population: 14000
-    max_garrison: 10000
-    tax_yield: 250
-    food_yield: 250
+    population: 15000
+    max_garrison: 11000
+    tax_yield: 260
+    food_yield: 260
     defense_level: 5
+    wall_hp: 110
+    max_wall_hp: 110
     adjacent: [dongping, dengzhou]
     garrison_strength: 5
     controlled_by_faction: imperial
+    description: "화영(花榮)과 진명(秦明)이 군관으로 있는 산동 동부의 요지."
 
   - id: dengzhou
     name_ko: 등주
@@ -162,24 +206,18 @@ towns:
     population: 8000
     max_garrison: 5000
     tax_yield: 150
-    food_yield: 300
+    food_yield: 320
     defense_level: 3
+    wall_hp: 70
+    max_wall_hp: 70
     adjacent: [qingzhou]
     garrison_strength: 3
     controlled_by_faction: imperial
+    description: "발해만 해안의 항구. 무송(武松)이 관직을 얻어 잠시 머문 곳. 장순(張順)이 어부로 활동."
 
-  - id: mengzhou
-    name_ko: 맹주
-    name_zh: 孟州
-    town_type: village
-    population: 7000
-    max_garrison: 4000
-    tax_yield: 130
-    food_yield: 130
-    defense_level: 2
-    adjacent: [huazhou, weizhou]
-    garrison_strength: 2
-    controlled_by_faction: imperial
+  # ══════════════════════════════════════════
+  # 수도권 — 변경(개봉부) 일대
+  # ══════════════════════════════════════════
 
   - id: weizhou
     name_ko: 위주
@@ -188,9 +226,157 @@ towns:
     population: 11000
     max_garrison: 12000
     tax_yield: 200
-    food_yield: 150
+    food_yield: 160
     defense_level: 6
-    adjacent: [taiyuan, mengzhou]
+    wall_hp: 120
+    max_wall_hp: 120
+    adjacent: [taiyuan, yanzhou, mengzhou]
+    garrison_strength: 5
+    controlled_by_faction: imperial
+    description: "노지심(魯智深)이 군관(軍官)으로 있던 서북 변경의 요새. 정도(鄭屠)를 때려죽인 후 도망쳤다."
+
+  - id: mengzhou
+    name_ko: 맹주
+    name_zh: 孟州
+    town_type: village
+    population: 8000
+    max_garrison: 4500
+    tax_yield: 140
+    food_yield: 140
+    defense_level: 3
+    wall_hp: 70
+    max_wall_hp: 70
+    adjacent: [weizhou, xiangzhou, bianjing, huazhou]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+    description: "무송(武松)이 반금련(潘金蓮) 사건 후 도망쳐 잠복했다 감옥살이를 한 곳."
+
+  - id: bianjing
+    name_ko: 변경 (개봉부)
+    name_zh: 汴京 開封府
+    town_type: metropolis
+    population: 60000
+    max_garrison: 50000
+    tax_yield: 1200
+    food_yield: 600
+    defense_level: 9
+    wall_hp: 200
+    max_wall_hp: 200
+    adjacent: [xiangzhou, mengzhou, dongchang, huazhou]
+    garrison_strength: 10
+    controlled_by_faction: imperial
+    gao_qiu_presence: 3
+    description: "북송의 수도 동경(東京) 개봉부. 휘종(徽宗) 황제와 고구(高俅)가 있는 권력의 중심."
+
+  - id: dongchang
+    name_ko: 동창부
+    name_zh: 東昌府
+    town_type: village
+    population: 10000
+    max_garrison: 6000
+    tax_yield: 190
+    food_yield: 160
+    defense_level: 3
+    wall_hp: 70
+    max_wall_hp: 70
+    adjacent: [jizhou, bianjing]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  # ══════════════════════════════════════════
+  # 강남 — 양쯔강 이남
+  # ══════════════════════════════════════════
+
+  - id: huazhou
+    name_ko: 화주
+    name_zh: 華州
+    town_type: village
+    population: 11000
+    max_garrison: 7500
+    tax_yield: 210
+    food_yield: 270
+    defense_level: 3
+    wall_hp: 80
+    max_wall_hp: 80
+    adjacent: [bianjing, mengzhou, jiangzhou]
+    garrison_strength: 4
+    controlled_by_faction: imperial
+    description: "수도와 강남을 잇는 중간 요충지."
+
+  - id: jiangzhou
+    name_ko: 강주
+    name_zh: 江州
+    town_type: metropolis
+    population: 27000
+    max_garrison: 16000
+    tax_yield: 520
+    food_yield: 640
+    defense_level: 5
+    wall_hp: 110
+    max_wall_hp: 110
+    adjacent: [huazhou, wuwei, luzhou]
+    garrison_strength: 5
+    controlled_by_faction: imperial
+    description: "양쯔강 유역의 중요 도시(현재 구강). 송강(宋江)이 유배되어 반시(反詩)를 쓰고 처형당할 뻔한 곳."
+
+  - id: wuwei
+    name_ko: 무위군
+    name_zh: 無為軍
+    town_type: village
+    population: 9000
+    max_garrison: 5000
+    tax_yield: 180
+    food_yield: 220
+    defense_level: 2
+    wall_hp: 60
+    max_wall_hp: 60
+    adjacent: [jiangzhou, luzhou]
+    garrison_strength: 2
+    controlled_by_faction: imperial
+
+  - id: luzhou
+    name_ko: 노주
+    name_zh: 廬州
+    town_type: village
+    population: 13000
+    max_garrison: 8500
+    tax_yield: 260
+    food_yield: 310
+    defense_level: 3
+    wall_hp: 80
+    max_wall_hp: 80
+    adjacent: [wuwei, jiangzhou, yangzhou]
+    garrison_strength: 3
+    controlled_by_faction: imperial
+
+  - id: yangzhou
+    name_ko: 양주
+    name_zh: 揚州
+    town_type: metropolis
+    population: 33000
+    max_garrison: 19000
+    tax_yield: 640
+    food_yield: 530
+    defense_level: 4
+    wall_hp: 100
+    max_wall_hp: 100
+    adjacent: [luzhou, suzhou]
+    garrison_strength: 4
+    controlled_by_faction: imperial
+    description: "대운하(大運河) 남단의 상업 도시."
+
+  - id: suzhou
+    name_ko: 소주
+    name_zh: 蘇州
+    town_type: metropolis
+    population: 36000
+    max_garrison: 22000
+    tax_yield: 720
+    food_yield: 830
+    defense_level: 4
+    wall_hp: 100
+    max_wall_hp: 100
+    adjacent: [yangzhou, hangzhou]
     garrison_strength: 5
     controlled_by_faction: imperial
 
@@ -198,63 +384,16 @@ towns:
     name_ko: 항주
     name_zh: 杭州
     town_type: metropolis
-    population: 40000
-    max_garrison: 25000
-    tax_yield: 800
-    food_yield: 700
+    population: 42000
+    max_garrison: 26000
+    tax_yield: 840
+    food_yield: 740
     defense_level: 5
-    adjacent: [jiangzhou, suzhou]
+    wall_hp: 120
+    max_wall_hp: 120
+    adjacent: [suzhou]
     garrison_strength: 6
     controlled_by_faction: imperial
+    description: "강남 최대 도시. 방랍(方臘)의 난이 이곳에서 시작된다."
 
-  - id: suzhou
-    name_ko: 소주
-    name_zh: 蘇州
-    town_type: metropolis
-    population: 35000
-    max_garrison: 20000
-    tax_yield: 700
-    food_yield: 800
-    defense_level: 4
-    adjacent: [hangzhou, yangzhou]
-    garrison_strength: 5
-    controlled_by_faction: imperial
 
-  - id: yangzhou
-    name_ko: 양주
-    name_zh: 揚州
-    town_type: metropolis
-    population: 30000
-    max_garrison: 18000
-    tax_yield: 600
-    food_yield: 500
-    defense_level: 4
-    adjacent: [suzhou, luzhou]
-    garrison_strength: 4
-    controlled_by_faction: imperial
-
-  - id: luzhou
-    name_ko: 노주
-    name_zh: 廬州
-    town_type: village
-    population: 12000
-    max_garrison: 8000
-    tax_yield: 250
-    food_yield: 300
-    defense_level: 3
-    adjacent: [yangzhou, jingnan]
-    garrison_strength: 3
-    controlled_by_faction: imperial
-
-  - id: jingnan
-    name_ko: 형남
-    name_zh: 荊南
-    town_type: fortress
-    population: 15000
-    max_garrison: 12000
-    tax_yield: 300
-    food_yield: 400
-    defense_level: 5
-    adjacent: [luzhou]
-    garrison_strength: 4
-    controlled_by_faction: imperial
