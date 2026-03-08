@@ -102,7 +102,6 @@ class TerminalUI:
         return next(h for h in heroes if h.id == chosen_id)
 
     def show_turn_header(self, state: GameState) -> None:
-        self.console.clear()
         self.console.rule(f"[bold yellow]제 {state.turn} 턴 (남은 턴: {state.turns_remaining()})[/]")
         player_hero = next((h for h in state.heroes.values() if h.is_player_controlled), None)
         if player_hero:
@@ -171,14 +170,25 @@ class TerminalUI:
         self.console.print("─" * 52)     # Separator at the bottom
 
     def choose_action(self, hero: Hero, state: GameState) -> str:
+        self.console.clear()
+        # 턴 헤더 재출력 (clear 후 항상 보이도록)
+        self.console.rule(f"[bold yellow]제 {state.turn} 턴 (남은 턴: {state.turns_remaining()})[/]")
+        faction = state.factions.get(hero.faction_id)
+        if faction:
+            status = (
+                f"[bold]세력:[/] {faction.name_ko} | "
+                f"[bold]금전:[/] {faction.gold} | [bold]군량:[/] {faction.food} | "
+                f"[bold]명성:[/] {faction.prestige} | [bold]안정도:[/] {state.dynasty_stability}"
+            )
+            self.console.print(Panel(status, border_style="blue"))
+
         town = state.towns[hero.current_town]
         self.console.print(
-            f"\n[bold cyan]{hero.name_ko}[/] "
+            f"[bold cyan]{hero.name_ko}[/] "
             f"(위치: {town.name_ko}, 병력: {hero.current_army},"
             f" AP: {hero.action_points})"
         )
 
-        # Display the static map here
         self._render_static_map(state, hero.current_town, highlight_town_id=None)
 
         choices = [
@@ -221,7 +231,7 @@ class TerminalUI:
         return None if chosen == "c" else chosen
 
     def show_message(self, message: str) -> None:
-        self.console.print(message)
+        self.console.print(message, justify="left")
 
     def show_setup_complete(self, state: GameState, hero: Hero) -> None:
         self.console.print(
