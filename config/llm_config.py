@@ -60,12 +60,12 @@ def get_design_llm() -> LLM:
 
 
 def get_code_llm() -> LLM:
-    """코드 생성 — Gemini 2.5 Flash.
+    """코드 생성 — Groq Llama 4 Scout 17Bx16E.
 
-    Groq tool calling 은 응답 JSON 이 크면 tool_use_failed(400) 를 반환하므로
-    큰 new_code 파라미터를 허용하는 Gemini Flash 를 사용한다.
+    Groq tool_use_failed 방지: PatchProjectFileTool 에서 new_code > 2500자 이면
+    에러를 반환해 모델이 함수를 잔거 컸포넌트로 분리하도록 유도한다.
     """
-    return get_gemini_flash_llm(temperature=0.1)
+    return get_groq_tool_llm(temperature=0.1, max_tokens=8192)
 
 
 def get_review_llm() -> LLM:

@@ -81,17 +81,27 @@ class SimpleFileWriteTool(BaseTool):
             return f"ERROR writing {file_path}: {e}"
 
 
+_MAX_PATCH_CHARS = 2500  # Groq tool call JSON 페이로드 한도 초과 방지
+
+
 class PatchProjectFileTool(BaseTool):
     name: str = "patch_project_file"
     description: str = (
         "파일에서 특정 함수나 클래스 블록만 교체한다. 파일 전체를 덮어쓰지 않는다. "
-        "토큰 절약 및 기존 코드 보호에 유리. "
         "old_code는 파일에서 교체할 기존 코드(def/class 블록 전체)를 완전히 일치하도록 복사. "
-        "new_code는 대체할 새 코드(들여쓰기 동일)."
+        "new_code는 대체할 새 코드(들여쓰기 동일). "
+        "new_code는 2500자 이하로 제한 — 크면 더 작은 helper 메서드로 분리한 후 각각 patch하라."
     )
     args_schema: type[BaseModel] = _PatchInput
 
     def _run(self, file_path: str, old_code: str, new_code: str) -> str:
+        if len(new_code) > _MAX_PATCH_CHARS:
+            return (
+                f"ERROR: new_code too large ({len(new_code)} chars > {_MAX_PATCH_CHARS} limit). "
+                "Groq tool call JSON payload limit 초과 방지를 위해 new_code 는 2500자 이하여야 한다. "
+                "함수를 더 작은 private helper 메서드(치당 40줄 이하)로 분리하고 각 메서드를 별도로 patch하라. "
+                "예: _build_left_panel(), _build_map_grid(), _build_town_detail() 등으로 억지로 쪼개서 작성."
+            )
         path = _resolve(file_path)
         if not path.exists():
             return f"ERROR: File not found: {file_path}"
