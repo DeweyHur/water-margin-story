@@ -45,53 +45,21 @@ def implement_feature_task(feature_request: str, developer: Agent) -> Task:
         description=(
             "아래 순서대로 도구를 호출하라.\n\n"
             "1. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
-            "2. read_project_file 호출: file_path='game/combat_manager.py'\n"
-            "3. read_project_file 호출: file_path='game/turn_manager.py'\n"
-            "4. read_project_file 호출: file_path='models/game_state.py'\n"
-            "5. read_project_file 호출: file_path='models/town.py'\n"
-            "6. 기능 요청을 구현하기 위해 수정이 필요한 파일을 모두 파악하라.\n"
-            "7. 각 수정 파일마다 저장 — 규칙:\n"
+            "2. read_project_file 호출: file_path='game/turn_manager.py'\n"
+            "3. 기능 요청을 구현하기 위해 수정이 필요한 파일을 모두 파악하라.\n"
+            "4. 각 수정 파일마다 저장 — 규칙:\n"
             "   - 기존 함수·메서드·클래스만 교체할 때: patch_project_file(file_path, old_code, new_code) 호출.\n"
             "   - 새 파일 생성 또는 파일 전체 재작성할 때만: write_project_file 호출.\n"
-            "   - ui/terminal_ui.py, game/combat_manager.py 등 200줄 이상 파일은\n"
-            "     반드시 patch_project_file로 특정 함수/메서드만 교체하라.\n"
+            "   - ui/terminal_ui.py 등 200줄 이상 파일은 반드시 patch_project_file로 특정 함수만 교체하라.\n"
             "   - ⚠️ patch_project_file new_code 한도: 2500자/40줄 이하. 초과하면 에러 반환 —\n"
             "     함수를 private helper 메서드(각 ~30줄)로 쪼갠 뒤 각각 별도 patch 호출하라.\n"
             "     한 번에 한 메서드만 patch 하라.\n"
             "   - 같은 파일에 여러 patch가 필요하면 순서대로 하나씩 호출하라.\n"
-            "8. python_runner 호출로 아래 코드를 실행해 구현을 검증하라 (AssertionError가 나면 해당 항목을 구현하고 다시 patch):\n"
-            "code='\n"
-            "import sys; sys.path.insert(0, \".\")\n"
-            "from ui.terminal_ui import TerminalUI\n"
-            "from game.combat_manager import CombatManager\n"
-            "ui = TerminalUI()\n"
-            "assert hasattr(ui, \"show_combat_preview\"), \"FAIL: show_combat_preview missing in TerminalUI\"\n"
-            "assert hasattr(ui, \"show_faction_change_animation\"), \"FAIL: show_faction_change_animation missing in TerminalUI\"\n"
-            "src_cm = open(\"game/combat_manager.py\").read()\n"
-            "assert \"Live\" in src_cm, \"FAIL: rich.live.Live not used in combat_manager.py\"\n"
-            "src_tm = open(\"game/turn_manager.py\").read()\n"
-            "assert \"show_combat_preview\" in src_tm, \"FAIL: show_combat_preview not called in turn_manager.py\"\n"
-            "assert \"show_faction_change_animation\" in src_tm, \"FAIL: show_faction_change_animation not called in turn_manager.py\"\n"
-            "print(\"VERIFY_OK\")\n"
-            "'\n\n"
+            "5. python_runner 호출: "
+            "code='import sys; sys.path.insert(0,\".\"); "
+            "from ui.terminal_ui import TerminalUI; "
+            "from game.combat_manager import CombatManager; print(\"VERIFY_OK\")'\n\n"
             f"기능 요청: {feature_request}\n\n"
-            "구현 가이드 (이 패턴을 반드시 사용하라):\n"
-            "  [전투 미리보기] TerminalUI에 show_combat_preview(hero_town_id, target_town_id, state) 추가.\n"
-            "    - console.clear() 후 지도를 그리되, 공격 출발지→목표 사이에 ASCII 화살표선(→ 또는 ===►)을 출력.\n"
-            "    - _render_static_map을 활용하되, 두 거점을 강조 표시.\n"
-            "    - input() 또는 questionary로 '전투 시작 (Enter)' 확인을 받는다.\n"
-            "  [전투 화면 스크롤 방지] combat_manager.py의 siege_battle·field_battle에서 Rich Live 컨텍스트 사용.\n"
-            "    - from rich.live import Live 임포트 추가.\n"
-            "    - 각 단계(phase) 출력을 Live(renderable, refresh_per_second=4) 안에서 업데이트.\n"
-            "    - 단계 사이 time.sleep은 1.0~1.5초로 늘려 플레이어가 읽을 수 있게 한다.\n"
-            "  [애니메이션] TerminalUI에 show_faction_change_animation(town_id, old_faction_id, new_faction_id, state) 추가.\n"
-            "    - 0.5초 간격으로 console.clear() + _render_static_map 3회 반복 (깜박임).\n"
-            "    - 마지막엔 점령 메시지를 Panel로 출력.\n"
-            "  [turn_manager 연결] _do_siege:\n"
-            "    - siege_battle 호출 전 ui.show_combat_preview(hero.current_town, town.id, state) 호출.\n"
-            "    - 승리 시 ui.show_faction_change_animation(town.id, old_faction, hero.faction_id, state) 호출.\n"
-            "  [combat_manager 수정] siege_battle 시그니처에 ui=None 파라미터 추가 불필요.\n"
-            "    Live 컨텍스트는 combat_manager 내부에서 자체 처리. turn_manager에서 따로 넘길 것 없음.\n"
             "코드 규칙: Python 3.11+, 타입 힌트, Pydantic v2, "
             "from __future__ import annotations, 기존 import 절대 제거 금지. "
             "기존 함수·클래스·메서드 절대 삭제 금지 — 새 코드만 추가하라."
@@ -101,6 +69,100 @@ def implement_feature_task(feature_request: str, developer: Agent) -> Task:
         ),
         agent=developer,
     )
+
+
+# ── 전투 기능 특화 3-step 태스크 ─────────────────────────────────────────────
+
+def combat_ui_task(developer: Agent) -> Task:
+    """Step 1: terminal_ui.py에 전투 미리보기 + 세력 변경 애니메이션 추가."""
+    return Task(
+        description=(
+            "아래 순서대로 도구를 호출하라. 다른 파일은 건드리지 마라.\n\n"
+            "1. read_project_file 호출: file_path='ui/terminal_ui.py'\n"
+            "2. read_project_file 호출: file_path='models/town.py'\n"
+            "3. terminal_ui.py 에 아래 두 메서드를 추가하라:\n\n"
+            "   A) show_combat_preview(self, hero_town_id: str, target_town_id: str, state: GameState) -> None\n"
+            "      - console.clear()\n"
+            "      - 제목 출력: 공격 출발지와 목표 마을 이름\n"
+            "      - _render_static_map 호출 (hero_town_id=hero_current_town, highlight=target_town_id)\n"
+            "      - ASCII 화살표 출력: f'  {출발지} ===► {목표}  공성 개시!'\n"
+            "      - input('전투 시작 — Enter 키를 누르세요...')\n\n"
+            "   B) show_faction_change_animation(self, town_id: str, old_faction_id: str, new_faction_id: str, state: GameState) -> None\n"
+            "      - import time 사용 (이미 있으면 생략)\n"
+            "      - 3회 반복: console.clear() + _render_static_map + time.sleep(0.5)\n"
+            "      - 마지막: console.print Panel — 점령 메시지\n\n"
+            "4. patch_project_file 규칙: new_code 2500자/40줄 이하.\n"
+            "   두 메서드를 각각 별도 patch로 추가하라. 기존 메서드 뒤에 삽입하는 방식 추천.\n"
+            "5. python_runner 호출:\n"
+            "code='import sys; sys.path.insert(0,\".\")\n"
+            "from ui.terminal_ui import TerminalUI\n"
+            "ui = TerminalUI()\n"
+            "assert hasattr(ui, \"show_combat_preview\"), \"FAIL: show_combat_preview missing\"\n"
+            "assert hasattr(ui, \"show_faction_change_animation\"), \"FAIL: show_faction_change_animation missing\"\n"
+            "print(\"STEP1_OK\")'\n\n"
+            "코드 규칙: from __future__ import annotations, 타입 힌트, 기존 코드 삭제 금지."
+        ),
+        expected_output="python_runner 결과 'STEP1_OK' 포함.",
+        agent=developer,
+    )
+
+
+def combat_manager_live_task(developer: Agent) -> Task:
+    """Step 2: combat_manager.py siege_battle에 Rich Live 컨텍스트 추가."""
+    return Task(
+        description=(
+            "아래 순서대로 도구를 호출하라. terminal_ui.py와 turn_manager.py는 건드리지 마라.\n\n"
+            "1. read_project_file 호출: file_path='game/combat_manager.py'\n"
+            "2. combat_manager.py 수정:\n"
+            "   A) 파일 상단 import에 'from rich.live import Live' 추가 (없으면).\n"
+            "      patch: old_code='from rich.progress import...' → new_code 같은 줄에 Live import 추가.\n"
+            "   B) siege_battle 메서드 맨 처음 console.print() 블록을 Live 컨텍스트로 감싸라:\n"
+            "      - 기존: 각 phase마다 console.print() 호출들이 흩어져 있음\n"
+            "      - 신규: siege_battle 시작 시 with Live(auto_refresh=False) as live: 블록으로 감싸고\n"
+            "        각 phase 출력 후 live.refresh() + time.sleep(1.2) 호출.\n"
+            "      ⚠️ siege_battle은 매우 긴 함수. patch는 상단 import 추가 목적으로만 하고\n"
+            "        실제 전투 루프는 console.print → live.console.print 로 교체하는 방식으로\n"
+            "        siege_battle 메서드 시작 부분(def siege_battle ~ phase_num = 0 까지)만 패치하라.\n"
+            "3. patch_project_file 규칙: new_code 2500자/40줄 이하.\n"
+            "4. python_runner 호출:\n"
+            "code='import sys; sys.path.insert(0,\".\")\n"
+            "src = open(\"game/combat_manager.py\").read()\n"
+            "assert \"Live\" in src, \"FAIL: Live not imported in combat_manager.py\"\n"
+            "from game.combat_manager import CombatManager\n"
+            "print(\"STEP2_OK\")'\n\n"
+            "코드 규칙: from __future__ import annotations, 기존 코드 삭제 금지."
+        ),
+        expected_output="python_runner 결과 'STEP2_OK' 포함.",
+        agent=developer,
+    )
+
+
+def combat_connect_task(developer: Agent) -> Task:
+    """Step 3: turn_manager._do_siege에 UI 호출 연결."""
+    return Task(
+        description=(
+            "아래 순서대로 도구를 호출하라. terminal_ui.py와 combat_manager.py는 건드리지 마라.\n\n"
+            "1. read_project_file 호출: file_path='game/turn_manager.py'\n"
+            "2. turn_manager.py 의 _do_siege 메서드를 수정하라:\n"
+            "   A) town.controlled_by_faction 을 old_faction 변수에 저장한다 (siege 전에).\n"
+            "   B) self.combat_manager.siege_battle(...) 호출 직전에 ui.show_combat_preview(hero.current_town, town.id, self.state) 추가.\n"
+            "   C) won=True 분기 안에서 town.controlled_by_faction = hero.faction_id 변경 후\n"
+            "      ui.show_faction_change_animation(town.id, old_faction, hero.faction_id, self.state) 추가.\n"
+            "3. patch_project_file: _do_siege 메서드만 교체. new_code 2500자 이하 — 현재 메서드가 짧으므로 충분.\n"
+            "4. python_runner 호출:\n"
+            "code='import sys; sys.path.insert(0,\".\")\n"
+            "src = open(\"game/turn_manager.py\").read()\n"
+            "assert \"show_combat_preview\" in src, \"FAIL: show_combat_preview not called in turn_manager\"\n"
+            "assert \"show_faction_change_animation\" in src, \"FAIL: show_faction_change_animation not called in turn_manager\"\n"
+            "from game.turn_manager import TurnManager\n"
+            "print(\"STEP3_OK\")'\n\n"
+            "코드 규칙: from __future__ import annotations, 기존 코드 삭제 금지."
+        ),
+        expected_output="python_runner 결과 'STEP3_OK' 포함.",
+        agent=developer,
+    )
+
+
 
 
 def generate_content_task(content_request: str, storyteller: Agent) -> Task:

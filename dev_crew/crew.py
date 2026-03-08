@@ -26,6 +26,9 @@ from dev_crew.tasks import (
     make_fix_from_failures_task,
     design_ui_task,
     implement_ui_task,
+    combat_ui_task,
+    combat_manager_live_task,
+    combat_connect_task,
 )
 
 
@@ -66,8 +69,14 @@ class GameDevCrew:
     # ------------------------------------------------------------------
 
     def _run_feature(self, request: str) -> str:
-        developer = game_developer()
+        # 전투 관련 기능은 3단계 집중 태스크로 실행 (컨텍스트 초과 방지)
+        _COMBAT_KEYWORDS = ("전투", "공성", "전장", "siege", "battle", "combat", "스크롤", "Live")
+        is_combat_feature = any(kw in request for kw in _COMBAT_KEYWORDS)
 
+        if is_combat_feature:
+            return self._run_combat_feature(request)
+
+        developer = game_developer()
         impl_task = implement_feature_task(request, developer)
 
         # Phase 1: implement (sequential — 파일 읽기 → 수정 → 검증)
@@ -99,6 +108,45 @@ class GameDevCrew:
         review_crew.kickoff()
 
         # Phase 3: smoke test — 실패 항목이 있으면 에이전트가 자동 수정
+        return self._run_smoke_phase()
+
+    def _run_combat_feature(self, request: str) -> str:
+        """전투 화면 기능: 3단계 집중 태스크로 실행.
+        Step1: terminal_ui.py UI 메서드 추가
+        Step2: combat_manager.py Live 컨텍스트 추가
+        Step3: turn_manager.py 연결
+        """
+        # Step 1 — terminal_ui.py에 show_combat_preview + show_faction_change_animation 추가
+        dev1 = game_developer()
+        task1 = combat_ui_task(dev1)
+        Crew(agents=[dev1], tasks=[task1], process=Process.sequential,
+             verbose=True, memory=False).kickoff()
+
+        # Step 2 — combat_manager.py에 Live 컨텍스트 추가
+        dev2 = game_developer()
+        task2 = combat_manager_live_task(dev2)
+        Crew(agents=[dev2], tasks=[task2], process=Process.sequential,
+             verbose=True, memory=False).kickoff()
+
+        # Step 3 — turn_manager.py에 UI 호출 연결
+        dev3 = game_developer()
+        task3 = combat_connect_task(dev3)
+        Crew(agents=[dev3], tasks=[task3], process=Process.sequential,
+             verbose=True, memory=False).kickoff()
+
+        # Review + fix
+        reviewer = code_reviewer()
+        review_developer = game_developer()
+        review_task = review_feature_task(request, reviewer)
+        fix_task = developer_fix_from_review_task(review_developer)
+        fix_task.context = [review_task]
+        Crew(
+            agents=[reviewer, review_developer],
+            tasks=[review_task, fix_task],
+            process=Process.sequential,
+            verbose=True,
+            memory=False,
+        ).kickoff()
         return self._run_smoke_phase()
 
     # ------------------------------------------------------------------
