@@ -22,37 +22,50 @@ scenarios:
       - song_jiang
       - lu_zhishen
       - wu_song
+    # ─── 1101년 역사적 세력 분포 ───────────────────────────────
+    # · 관군(宋)  — 수도·목주지·요충지 17곳 직할 통치
+    # · 양산박   — 왕륜의 소규모 도적단. 양산 단 1곳
+    # · 청풍채   — 화영(花榮)이 지키는 반독립 소요새.
+    #              청풍채는 산동성 동평부 인근 산채 → 동평 1곳
+    # · 요나라   — 안문관 북쪽에서 압박. 접경 요새 안문관에
+    #              요나라 영향력이 미침 (후기 시나리오 복선)
+    # · 미점령   — 통치 공백·오지:
+    #   위주(渭州) — 노지심 사건 직후 혼란, 변방 공백
+    #   등주(登州) — 산동 해안 외진 항구, 해적 출몰
+    #   노주(盧州) — 강남 내륙 오지, 관군 미배치
+    #   무위(無爲) — 강남 오지, 사실상 무정부 상태
     town_control:
       imperial:
-        - bianjing
-        - daming
-        - cangzhou
-        - taiyuan
-        - zhending
-        - yanmen
-        - yanzhou
-        - xiangzhou
-        - yunzhou
-        - dongping
-        - qingzhou
-        - dengzhou
-        - jizhou
-        - dongchang
-        - weizhou
-        - mengzhou
-        - huazhou
-        - yangzhou
-        - wuwei
-        - luzhou
-        - jiangzhou
-        - suzhou
-        - hangzhou
+        - bianjing    # 수도, 고구·채경 권좌
+        - daming      # 북방 최대 거점, 노준의 근거지
+        - taiyuan     # 산서 중심, 강한 외곽 방어
+        - zhending    # 하북 요새
+        - cangzhou    # 임충 유배지
+        - yanmen      # 북방 관문 (요나라와 접경)
+        - yanzhou     # 산서 내륙
+        - xiangzhou   # 하남 요충
+        - yunzhou     # 운성현, 송강의 고향·근무지
+        - qingzhou    # 산동 대도시, 화영이 인근 주둔
+        - jizhou      # 기주, 양산박과 인접한 관군 전진기지
+        - dongchang   # 동창부
+        - mengzhou    # 맹주, 무송이 호랑이 잡은 곳
+        - huazhou     # 화주, 관승이 주둔
+        - yangzhou    # 양주, 강남 최대 상업도시
+        - jiangzhou   # 강주, 형부 감옥 (송강 유배 예정지)
+        - suzhou      # 소주, 강남 대도시
+        - hangzhou    # 항주, 강남 최대 중심지
       liangshan:
-        - liangshan
-      liao: []
-      jin: []
-      erlongshan: []
-      qingfeng: []
+        - liangshan   # 왕륜의 소규모 도적단
+      liao:
+        []            # 요나라 게임 내 직할 거점 없음 (국경 밖 세력)
+      jin:
+        []            # 금나라 1115년 건국 → 1101년엔 미등장
+      erlongshan:
+        []            # 노지심 아직 도주 중 → 이룡산 미점령
+      qingfeng:
+        - dongping    # 화영 청풍채, 동평부 산악 인근 반독립
+      # 미점령 (controlled_by_faction: null)
+      # weizhou / dengzhou / luzhou / wuwei — 위 어떤 세력에도 포함 안 됨
     hero_starts:
       lin_chong:  cangzhou
       song_jiang: yunzhou

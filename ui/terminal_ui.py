@@ -4,6 +4,7 @@ from typing import Optional
 
 import questionary
 from prompt_toolkit import Application
+from prompt_toolkit.shortcuts import prompt as _pt_prompt
 from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import VSplit, Window
@@ -41,66 +42,56 @@ class TerminalUI:
     """Rich + questionary 터미널 UI."""
 
     # ─── Grid (col, row): col = west→east, row = north→south ───────────────
+    # Compact layout meant to fit in ~83 display cols (CELL_W=7, max_col=10)
     _COORDS: dict[str, tuple[int, int]] = {
-        # Row 0 — 금/요 북방 접경
-        "yanmen":    (5,  0),
-        # Row 1 — 하북 / 산서
-        "taiyuan":   (3,  1),
-        "zhending":  (8,  1),
-        "daming":    (10, 1),
-        "cangzhou":  (12, 1),
-        # Row 2 — 중북부 / 산동
-        "weizhou":   (0,  2),
-        "yanzhou":   (2,  2),
-        "xiangzhou": (6,  2),
-        "yunzhou":   (11, 2),
-        "dongping":  (12, 2),
-        "qingzhou":  (13, 2),
-        "dengzhou":  (15, 2),
-        # Row 3 — 수도권 / 양산박
-        "mengzhou":  (2,  3),
-        "bianjing":  (6,  3),
-        "liangshan": (11, 3),
-        "jizhou":    (12, 3),
-        "dongchang": (13, 3),
+        # Row 0 — 금·요 북방 접경
+        "yanmen":    (4,  0),
+        # Row 1 — 하북·산서
+        "taiyuan":   (2,  1),  "zhending":  (5,  1),
+        "daming":    (7,  1),  "cangzhou":  (9,  1),
+        # Row 2 — 중북부·산동
+        "weizhou":   (0,  2),  "yanzhou":   (1,  2),
+        "xiangzhou": (4,  2),
+        "yunzhou":   (7,  2),  "dongping":  (8,  2),
+        "qingzhou":  (9,  2),  "dengzhou":  (10, 2),
+        # Row 3 — 수도권·양산박
+        "mengzhou":  (1,  3),  "bianjing":  (4,  3),
+        "liangshan": (7,  3),  "jizhou":    (8,  3),  "dongchang": (9,  3),
         # Row 4 — 화이허 이남
-        "huazhou":   (1,  4),
+        "huazhou":   (2,  4),
         # Row 6 — 양쯔강 북안
-        "yangzhou":  (13, 6),
-        # Row 7-8 — 강남
-        "luzhou":    (10, 7),
-        "wuwei":     (11, 7),
-        "suzhou":    (14, 7),
-        "jiangzhou": (10, 8),
-        "hangzhou":  (14, 8),
+        "yangzhou":  (9,  6),
+        # Row 7–8 — 강남
+        "luzhou":    (6,  7),  "wuwei":     (7,  7),  "suzhou":    (9,  7),
+        "jiangzhou": (6,  8),  "hangzhou":  (9,  8),
     }
     _SHORT: dict[str, str] = {
-        "yanmen":    "雁門",
-        "taiyuan":   "太原",
-        "zhending":  "真定",
-        "daming":    "大名",
-        "cangzhou":  "滄州",
-        "weizhou":   "渭州",
-        "yanzhou":   "延州",
-        "xiangzhou": "相州",
-        "yunzhou":   "鄆城",
-        "dongping":  "東平",
-        "qingzhou":  "靑州",
-        "dengzhou":  "登州",
-        "mengzhou":  "孟州",
-        "bianjing":  "汴京",
-        "liangshan": "梁山",
-        "jizhou":    "濟州",
-        "dongchang": "東昌",
-        "huazhou":   "華州",
-        "yangzhou":  "揚州",
-        "luzhou":    "廬州",
-        "wuwei":     "無為",
-        "jiangzhou": "江州",
-        "suzhou":    "蘇州",
-        "hangzhou":  "杭州",
+        "yanmen":    "안문",  "taiyuan":   "태원",  "zhending":  "진정",
+        "daming":    "대명",  "cangzhou":  "창주",  "weizhou":   "위주",
+        "yanzhou":   "연주",  "xiangzhou": "상주",  "yunzhou":   "운성",
+        "dongping":  "동평",  "qingzhou":  "청주",  "dengzhou":  "등주",
+        "mengzhou":  "맹주",  "bianjing":  "변경",  "liangshan": "양산",
+        "jizhou":    "기주",  "dongchang": "동창",  "huazhou":   "화주",
+        "yangzhou":  "양주",  "luzhou":    "노주",  "wuwei":     "무위",
+        "jiangzhou": "강주",  "suzhou":    "소주",  "hangzhou":  "항주",
     }
-    _TYPE_ICON = {"village": "縣", "fortress": "寨", "metropolis": "府"}
+    _TYPE_ICON = {"village": "현(縣)", "fortress": "채(寨)", "metropolis": "부(府)"}
+    # Rich style name → prompt_toolkit style string
+    _RICH_TO_PTK: dict[str, str] = {
+        "bright_red":    "fg:ansibrightred",
+        "bright_green":  "fg:ansibrightgreen",
+        "bright_blue":   "fg:ansibrightblue",
+        "bright_yellow": "fg:ansibrightyellow",
+        "yellow":        "fg:ansiyellow",
+        "cyan":          "fg:ansicyan",
+        "magenta":       "fg:ansimagenta",
+        "white":         "fg:ansiwhite",
+        "bright_black":  "fg:ansibrightblack",
+        "bold black on bright_yellow": "bold fg:ansiblack bg:ansibrightyellow",
+        "bold black on yellow":        "bold fg:ansiblack bg:ansiyellow",
+        "bold white":  "bold fg:ansiwhite",
+        "bold bright_white": "bold fg:ansiwhite",
+    }
 
     def __init__(self) -> None:
         self.console = Console()
@@ -140,7 +131,7 @@ class TerminalUI:
             title=f"[bold red]{chosen['year']}년 시나리오",
             border_style="yellow",
         ))
-        input("\n  [ Enter ] 키를 눌러 영웅 선택으로 이동... ")
+        _pt_prompt("\n  [ Enter ] 키를 눌러 영웅 선택으로 이동... ")
         return chosen
 
     def choose_hero(self, heroes: list[Hero]) -> Hero:
@@ -203,35 +194,47 @@ class TerminalUI:
         }
         return _all_coords, _max_col, _max_row, _coord_to_id
 
-    def _render_static_map(self, state: GameState, hero_current_town_id: str, highlight_town_id: Optional[str] = None) -> None:
-        """Render an ASCII map with Bresenham connection lines between adjacent towns."""
+    # ------------------------------------------------------------------
+    # Shared map canvas builder
+    # ------------------------------------------------------------------
+
+    def _build_map_canvas(
+        self,
+        state: GameState,
+        hero_current_town_id: str,
+        highlight_town_id: Optional[str] = None,
+        reachable_ids: Optional[set] = None,
+    ) -> tuple[list[list[tuple[str, str]]], int, int]:
+        """Build a shared character canvas for all map views.
+
+        Returns (canvas, canvas_w, canvas_h).
+        canvas[y][x] = (char, rich_style_str).
+        Wide (CJK) chars occupy canvas[y][x] and canvas[y][x+1]=(\x00, style).
+        """
         import unicodedata
-        from rich.text import Text
 
         def _dw(s: str) -> int:
-            """Terminal display width (CJK chars count as 2)."""
             w = 0
             for c in s:
                 eaw = unicodedata.east_asian_width(c)
                 w += 2 if eaw in ("W", "F") else 1
             return w
 
-        _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
+        _all_coords, _max_col, _max_row, _ = self._get_map_grid_data(state)
         town_by_id = {t.id: t for t in state.towns.values()}
 
-        CELL_W = 8   # display cols per grid column
+        CELL_W = 7   # display columns per grid column
         CELL_H = 3   # canvas rows per grid row
 
-        canvas_w = (_max_col + 1) * CELL_W + 8
+        canvas_w = (_max_col + 1) * CELL_W + 6
         canvas_h = (_max_row + 1) * CELL_H + 2
 
-        # canvas[y][x] = (char, style)  — x is a display-column index
         canvas: list[list[tuple[str, str]]] = [
             [(" ", "") for _ in range(canvas_w)] for _ in range(canvas_h)
         ]
 
         def _px(col: int) -> int:
-            return col * CELL_W + 2
+            return col * CELL_W + 3
 
         def _py(row: int) -> int:
             return row * CELL_H + 1
@@ -247,16 +250,16 @@ class TerminalUI:
             sx = 1 if x0 < x1 else -1
             sy = 1 if y0 < y1 else -1
             if adx == 0:
-                ch = "|"
+                line_ch = "|"
             elif ady == 0:
-                ch = "-"
+                line_ch = "-"
             elif (sx > 0) == (sy > 0):
-                ch = "\\"
+                line_ch = "\\"
             else:
-                ch = "/"
+                line_ch = "/"
             err = adx - ady
             while True:
-                _set(y0, x0, ch, "dim cyan")
+                _set(y0, x0, line_ch, "bright_black")
                 if x0 == x1 and y0 == y1:
                     break
                 e2 = 2 * err
@@ -267,7 +270,7 @@ class TerminalUI:
                     err += adx
                     y0 += sy
 
-        # --- 1. Draw connection lines (drawn first; labels overwrite them) ---
+        # ── 1. Draw connection lines (labels overwrite them later) ─────────
         seen_edges: set[frozenset] = set()
         for tid, town in town_by_id.items():
             if tid not in _all_coords:
@@ -281,39 +284,104 @@ class TerminalUI:
                 c1, r1 = _all_coords[adj_id]
                 _bresenham(_px(c0), _py(r0), _px(c1), _py(r1))
 
-        # --- 2. Place town labels onto canvas (overwrite line chars) ---
+        # ── 2. Faction color resolver ──────────────────────────────────────
+        _faction_color: dict[str, str] = {
+            "imperial":   "bright_red",
+            "liangshan":  "bright_green",
+            "erlongshan": "bright_blue",
+            "qingfeng":   "magenta",
+            "jin":        "yellow",
+            "liao":       "cyan",
+        }
+
+        def _town_style(tid: str) -> str:
+            if tid == highlight_town_id:
+                return "bold black on bright_yellow"
+            if tid == hero_current_town_id:
+                return "bold black on yellow"
+            if reachable_ids and tid in reachable_ids:
+                return "bold white"
+            t = town_by_id.get(tid)
+            if not t:
+                return "bright_black"
+            fid = t.controlled_by_faction or ""
+            return _faction_color.get(fid, "bright_black")  # bright_black = unclaimed
+
+        # ── 3. Place town labels (overwrite lines) ─────────────────────────
         for tid, (col, row) in _all_coords.items():
             if tid not in town_by_id:
                 continue
-            short = self._SHORT.get(tid, tid[:2])
-            label = f"[{short}]"
-            label_dw = _dw(label)
+            short = self._SHORT.get(tid, tid[:2])  # 2 Hangul chars = 4 display cols
+            label_dw = _dw(short)
             cx = _px(col) - label_dw // 2
             cy = _py(row)
-
-            t = town_by_id[tid]
-            if tid == highlight_town_id:
-                style = "bold black on bright_yellow"
-            elif tid == hero_current_town_id:
-                style = "bold black on yellow"
-            else:
-                fid = t.controlled_by_faction or ""
-                faction_obj = state.factions.get(fid)
-                fc = faction_obj.color if faction_obj else "white"
-                style = fc if fc.startswith("bright") else fc
-
+            style = _town_style(tid)
             x = cx
-            for ch in label:
+            for ch in short:
                 cw = _dw(ch)
                 if 0 <= cy < canvas_h and 0 <= x < canvas_w:
                     canvas[cy][x] = (ch, style)
                     if cw == 2 and x + 1 < canvas_w:
-                        canvas[cy][x + 1] = ("\x00", style)  # wide-char placeholder
+                        canvas[cy][x + 1] = ("\x00", style)
                 x += cw
 
-        # --- 3. Render canvas row by row ---
-        self.console.print("[bold underline] 전략 지도  (북→남 / 서→동)[/]")
-        self.console.print("─" * 52)
+        return canvas, canvas_w, canvas_h
+
+    def _canvas_to_ptk_tokens(
+        self,
+        canvas: list[list[tuple[str, str]]],
+        canvas_w: int,
+        canvas_h: int,
+    ) -> list[tuple[str, str]]:
+        """Convert a Rich-style canvas to prompt_toolkit (style, text) token list."""
+        tokens: list[tuple[str, str]] = []
+        for y in range(canvas_h):
+            for x in range(canvas_w):
+                ch, style = canvas[y][x]
+                if ch == "\x00":
+                    continue
+                ptk_style = self._RICH_TO_PTK.get(style, "")
+                tokens.append((ptk_style, ch))
+            tokens.append(("", "\n"))
+        return tokens
+
+    def _map_legend_rich(self) -> str:
+        return (
+            "[bright_red]■관군[/] [bright_green]■양산박[/] "
+            "[bright_blue]■이룡산[/] [magenta]■청풍채[/] "
+            "[cyan]■요나라[/] [yellow]■금나라[/] "
+            "[bright_black]· 미점령[/]  [bold black on yellow] 현재위치 [/]"
+        )
+
+    def _map_legend_ptk_tokens(self) -> list[tuple[str, str]]:
+        return [
+            ("", "\n"),
+            ("fg:ansibrightred",   "■관군"),    ("", "  "),
+            ("fg:ansibrightgreen", "■양산박"),   ("", "  "),
+            ("fg:ansibrightblue",  "■이룡산"),   ("", "  "),
+            ("fg:ansimagenta",     "■청풍채"),   ("", "  "),
+            ("fg:ansicyan",        "■요나라"),   ("", "  "),
+            ("fg:ansiyellow",      "■금나라"),   ("", "  "),
+            ("fg:ansibrightblack", "· 미점령\n"),
+        ]
+
+    def _render_static_map(
+        self,
+        state: GameState,
+        hero_current_town_id: str,
+        highlight_town_id: Optional[str] = None,
+    ) -> None:
+        """Rich-rendered ASCII map with connection lines between adjacent towns."""
+        from rich.text import Text
+
+        canvas, canvas_w, canvas_h = self._build_map_canvas(
+            state, hero_current_town_id, highlight_town_id
+        )
+
+        rule_w = min(canvas_w, 80)
+        self.console.print("[bold] 전략 지도  (북→남 / 서→동)[/]")
+        self.console.print(self._map_legend_rich())
+        self.console.print("─" * rule_w)
 
         for y in range(canvas_h):
             line = Text()
@@ -330,7 +398,7 @@ class TerminalUI:
                 x += 1
             self.console.print(line)
 
-        self.console.print("─" * 52)
+        self.console.print("─" * rule_w)
 
     def choose_action(self, hero: Hero, state: GameState) -> str:
         """Full-screen action selector: left = info + action list, right = 2D map."""
@@ -381,39 +449,10 @@ class TerminalUI:
             return lines
 
         def map_text() -> list[tuple[str, str]]:
-            lines: list[tuple[str, str]] = [
-                ("bold underline", " 전략 지도  (북→남 / 서→동)\n"),
-                ("", "─" * 52 + "\n"),
-            ]
-            for row in range(_max_row + 1):
-                lines.append(("", "  "))
-                for col in range(_max_col + 1):
-                    tid = _coord_to_id.get((col, row))
-                    if tid is None:
-                        lines.append(("", "       "))
-                    else:
-                        short = self._SHORT.get(tid, tid[:2])
-                        t = town_by_id[tid]
-                        if tid == hero.current_town:
-                            style = "bold fg:ansiblack bg:ansiyellow"
-                        else:
-                            fid = t.controlled_by_faction or ""
-                            faction_obj = state.factions.get(fid)
-                            fc = faction_obj.color if faction_obj else "white"
-                            _ptk = {
-                                "bright_green":  "fg:ansibrightgreen",
-                                "bright_red":    "fg:ansibrightred",
-                                "bright_blue":   "fg:ansibrightblue",
-                                "bright_yellow":  "fg:ansibrightyellow",
-                                "cyan":          "fg:ansicyan",
-                                "yellow":        "fg:ansiyellow",
-                                "magenta":       "fg:ansimagenta",
-                                "white":         "fg:ansiwhite",
-                            }
-                            style = _ptk.get(fc, "fg:ansiwhite")
-                        lines.append((style, f"[{short}]"))
-                        lines.append(("", "  "))
-                lines.append(("", "\n"))
+            canvas, cw, ch_h = self._build_map_canvas(state, hero.current_town)
+            lines: list[tuple[str, str]] = [("bold underline", " 전략 지도\n")]
+            lines += self._canvas_to_ptk_tokens(canvas, cw, ch_h)
+            lines += self._map_legend_ptk_tokens()
             return lines
 
         kb = KeyBindings()
@@ -451,30 +490,113 @@ class TerminalUI:
         return result[0]
 
     def choose_destination(self, hero: Hero, town: Town, state: GameState) -> Optional[str]:
-        self.console.clear()
-        table = Table(title=f"{town.name_ko} 인접 지역")
-        table.add_column("이름", style="bold")
-        table.add_column("지배 세력", style="green")
-        for adj_id in town.adjacent:
-            adj_town = state.towns[adj_id]
-            faction_name = (
-                state.factions[adj_town.controlled_by_faction].name_ko
-                if adj_town.controlled_by_faction else "중립"
-            )
-            table.add_row(adj_town.name_ko, faction_name)
-        self.console.print(table)
+        """Full-screen map-based destination picker.
 
-        adj_towns = town.adjacent
-        display = [
-            state.towns[tid].name_ko + " (" + (
-                state.factions[state.towns[tid].controlled_by_faction].name_ko
-                if state.towns[tid].controlled_by_faction else "중립"
-            ) + ")"
-            for tid in adj_towns
-        ] + ["취소"]
-        ids = adj_towns + ["c"]
-        chosen = _select("이동할 지역을 선택하세요 (↑↓ + Enter)", ids, display)
-        return None if chosen == "c" else chosen
+        Reachable (adjacent) towns are highlighted bold-white on the map.
+        ↑↓ / Tab cycle through destinations in the left panel.
+        Enter confirms, q / Escape cancels.
+        """
+        adj_ids = [tid for tid in town.adjacent if tid in state.towns]
+        if not adj_ids:
+            return None
+
+        town_by_id = {t.id: t for t in state.towns.values()}
+        cursor = [0]   # index into adj_ids
+        result = [None]
+        reachable_set = set(adj_ids)
+
+        def left_text() -> list[tuple[str, str]]:
+            sel_id = adj_ids[cursor[0]]
+            sel = town_by_id.get(sel_id)
+            faction = state.factions.get(sel.controlled_by_faction) if sel else None
+            fname = faction.name_ko if faction else "미점령"
+            fc = faction.color if faction else "bright_black"
+            fstyle = self._RICH_TO_PTK.get(fc, "")
+
+            lines: list[tuple[str, str]] = [
+                ("bold underline", " 이동 목적지 선택\n"),
+                ("", "─" * 28 + "\n"),
+                ("fg:ansibrightblack", " 현재 위치\n"),
+                ("bold fg:ansiyellow", f"  {town.name_ko} ({town.name_zh})\n"),
+                ("", "\n"),
+                ("fg:ansibrightblack", " 이동 대상\n"),
+                ("bold fg:ansiwhite",
+                 f"  → {sel.name_ko} ({sel.name_zh})\n" if sel else "  →\n"),
+                (fstyle, f"  {fname}\n"),
+                ("", "\n"),
+                ("", "─" * 28 + "\n"),
+            ]
+            # Adjacent town list
+            for i, tid in enumerate(adj_ids):
+                t = town_by_id.get(tid)
+                if not t:
+                    continue
+                if i == cursor[0]:
+                    lines.append(("bold fg:ansiwhite", f" ▶ {t.name_ko}\n"))
+                else:
+                    lines.append(("fg:ansibrightblack", f"   {t.name_ko}\n"))
+            lines += [
+                ("", "\n"),
+                ("fg:ansibrightblack", " ↑↓  목적지 변경\n"),
+                ("fg:ansibrightgreen", " Enter  이동\n"),
+                ("fg:ansibrightred",   " q / Esc  취소\n"),
+            ]
+            return lines
+
+        def map_text() -> list[tuple[str, str]]:
+            sel_id = adj_ids[cursor[0]]
+            canvas, cw, ch_h = self._build_map_canvas(
+                state, hero.current_town, sel_id, reachable_ids=reachable_set
+            )
+            lines: list[tuple[str, str]] = [("bold underline", " 전략 지도 — 이동\n")]
+            lines += self._canvas_to_ptk_tokens(canvas, cw, ch_h)
+            lines += self._map_legend_ptk_tokens()
+            lines += [
+                ("", "\n"),
+                ("bold fg:ansiwhite", " ★ "),
+                ("fg:ansibrightblack", "= 이동 가능 지역\n"),
+            ]
+            return lines
+
+        kb = KeyBindings()
+
+        @kb.add("up")
+        def _up(event):
+            cursor[0] = (cursor[0] - 1) % len(adj_ids)
+            event.app.invalidate()
+
+        @kb.add("down")
+        def _down(event):
+            cursor[0] = (cursor[0] + 1) % len(adj_ids)
+            event.app.invalidate()
+
+        @kb.add("enter")
+        def _enter(event):
+            result[0] = adj_ids[cursor[0]]
+            event.app.exit()
+
+        @kb.add("q")
+        @kb.add("escape")
+        def _cancel(event):
+            result[0] = None
+            event.app.exit()
+
+        layout = Layout(
+            VSplit([
+                Window(content=FormattedTextControl(left_text), width=30),
+                Window(width=1, char="│"),
+                Window(content=FormattedTextControl(map_text)),
+            ])
+        )
+
+        Application(
+            layout=layout,
+            key_bindings=kb,
+            full_screen=True,
+            mouse_support=False,
+        ).run()
+
+        return result[0]
 
     def show_message(self, message: str) -> None:
         self.console.print(message, justify="left")
@@ -536,46 +658,17 @@ class TerminalUI:
         def map_text() -> list[tuple[str, str]]:
             sel_id = towns[cursor[0]].id
             sel = town_by_id[sel_id]
+            player_hero = state.get_player_hero()
+            hero_town = player_hero.current_town if player_hero else ""
 
-            lines: list[tuple[str, str]] = [
-                ("bold underline", " 전략 지도  (북→남 / 서→동)\n"),
-                ("", "─" * 52 + "\n"),
-            ]
+            canvas, cw, ch_h = self._build_map_canvas(state, hero_town, sel_id)
+            lines: list[tuple[str, str]] = [("bold underline", " 전략 지도\n")]
+            lines += self._canvas_to_ptk_tokens(canvas, cw, ch_h)
+            lines += self._map_legend_ptk_tokens()
 
-            for row in range(_max_row + 1):
-                lines.append(("", "  "))
-                for col in range(_max_col + 1):
-                    tid = _coord_to_id.get((col, row))
-                    if tid is None:
-                        lines.append(("", "       "))   # 7 cols blank
-                    else:
-                        short = self._SHORT.get(tid, tid[:2])
-                        t = town_by_id[tid]
-                        if tid == sel_id:
-                            style = "bold fg:ansiblack bg:ansiyellow"
-                        else:
-                            fid = t.controlled_by_faction or ""
-                            faction_obj = state.factions.get(fid)
-                            fc = faction_obj.color if faction_obj else "white"
-                            # map Rich color names to prompt_toolkit ansi names
-                            _ptk = {
-                                "bright_green":  "fg:ansibrightgreen",
-                                "bright_red":    "fg:ansibrightred",
-                                "bright_blue":   "fg:ansibrightblue",
-                                "bright_yellow":  "fg:ansibrightyellow",
-                                "cyan":          "fg:ansicyan",
-                                "yellow":        "fg:ansiyellow",
-                                "magenta":       "fg:ansimagenta",
-                                "white":         "fg:ansiwhite",
-                            }
-                            style = _ptk.get(fc, "fg:ansiwhite")
-                        lines.append((style, f"[{short}]"))
-                        lines.append(("", "  "))        # 2-col separator
-                lines.append(("", "\n"))
-
-            # ---- selected town detail ----
+            # ── selected town detail ──────────────────────────────────────
             faction = state.factions.get(sel.controlled_by_faction)
-            fname = faction.name_ko if faction else "중립"
+            fname = faction.name_ko if faction else "중립 (미점령)"
             wbar = "█" * int(sel.wall_integrity() * 8) + "░" * (8 - int(sel.wall_integrity() * 8))
             adj = ", ".join(
                 town_by_id[a].name_ko for a in sel.adjacent if a in town_by_id
@@ -586,9 +679,9 @@ class TerminalUI:
                 ("", "\n"),
                 ("bold fg:ansiyellow", f" ▶ {sel.name_ko} ({sel.name_zh})  {type_label}\n"),
                 ("", "─" * 52 + "\n"),
-                ("", f" 세력 : {fname:<12}  방어 : {'★' * sel.defense_level}{'☆' * (10 - sel.defense_level)}\n"),
+                ("", f" 세력 : {fname:<14}  방어 : {'★' * sel.defense_level}{'☆' * (10 - sel.defense_level)}\n"),
                 ("", f" 성벽 : [{wbar}] {sel.wall_hp}/{sel.max_wall_hp}"
-                     f"      인구 : {sel.population:,}\n"),
+                     f"   인구 : {sel.population:,}\n"),
                 ("", f" 세금 : {sel.tax_yield:<6} 식량 : {sel.food_yield}\n"),
                 ("fg:ansibrightblack", f" 인접 : {adj}\n"),
             ]
@@ -641,7 +734,7 @@ class TerminalUI:
         self.console.clear()
         self.console.print(f'  {h_name} ===> {t_name}  Attack Start!')
         self._render_static_map(state, hero_town_id, highlight_town_id=target_town_id)
-        input('Press Enter to start battle...')
+        _pt_prompt('Press Enter to start battle...')
 
     def show_faction_change_animation(self, town_id: str, old_faction_id: str, new_faction_id: str, state: GameState) -> None:
         import time

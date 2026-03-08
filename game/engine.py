@@ -86,7 +86,13 @@ class GameEngine:
 
     def _apply_scenario(self, scenario: dict, heroes: list) -> None:
         """Apply initial faction town control and hero starting positions."""
-        # Town control
+        # 먼저 모든 도시와 세력을 미점령으로 초기화 (towns.yaml 기본값 무시)
+        for town in self.state.towns.values():
+            town.controlled_by_faction = None
+        for faction in self.state.factions.values():
+            faction.controlled_towns = []
+
+        # 시나리오 town_control 적용
         town_ctrl: dict[str, list[str]] = scenario.get("town_control", {})
         for faction_id, town_ids in town_ctrl.items():
             faction = self.state.factions.get(faction_id)
