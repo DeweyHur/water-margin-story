@@ -114,10 +114,17 @@ class TurnManager:
             location=town.id,
         )
 
+        old_faction = town.controlled_by_faction
+        old_faction = town.controlled_by_faction
+        ui.show_combat_preview(hero.current_town, town.id, self.state)
+        old_faction = town.controlled_by_faction
+        ui.show_combat_preview(hero.current_town, town.id, self.state)
         result = self.combat_manager.siege_battle(attacker, defender, town, attacker_general=hero)
 
         won = result.winner == hero.faction_id
         if won:
+            town.controlled_by_faction = hero.faction_id
+            ui.show_faction_change_animation(town.id, old_faction, hero.faction_id, self.state)
             hero.current_army = attacker.troops
             event = GameEvent(
                 type=EventType.COMBAT,

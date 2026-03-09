@@ -10,6 +10,7 @@ from rich import box
 from rich.columns import Columns
 from rich.console import Console
 from rich.panel import Panel
+from rich.live import Live
 from rich.progress import BarColumn, Progress, TextColumn
 from rich.table import Table
 from rich.text import Text
@@ -164,8 +165,8 @@ class CombatManager:
         total_wall_dmg = 0
         phase_num = 0
 
-        console.print()
-        console.rule(f"[bold red]⚔️  공성전 개시: {attacker.name} → {town.name_ko}  ⚔️[/]")
+        console.clear()
+        console.print(f"[bold red]{attacker.name} -> {town.name_ko}[/]")
         console.print()
 
         # ── Phase 1: Bombardment (투석기 포격) ──────────────────────────────
@@ -182,7 +183,7 @@ class CombatManager:
             msg = f"  투석기 {attacker.catapults}문이 불을 뿜는다!  성벽 -{wall_dmg} HP"
             narrative.append(msg)
             console.print(f"[bold red]{msg}[/]")
-            time.sleep(0.3)
+            time.sleep(1.2)
 
         # ── Phase 2: Main Assault (전면 돌격) ─────────────────────────────
         max_rounds = 5
@@ -191,8 +192,9 @@ class CombatManager:
                 break
 
             phase_num += 1
-            console.print()
-            console.print(f"[bold white]【제{phase_num}단계】 {rnd}번째 돌격[/]")
+            
+
+            console.print(f"[bold white]【제{phase_num}단계】 {rnd}번째 공격[/]")
             console.print(Columns([_army_panel(attacker, "공격군 ⚔️", "red"), _army_panel(defender, f"수비군 🛡 ({town.name_ko})", "blue")]))
 
             # Wall bonus for defender

@@ -134,29 +134,126 @@ class TerminalUI:
         _pt_prompt("\n  [ Enter ] 키를 눌러 영웅 선택으로 이동... ")
         return chosen
 
-    def choose_hero(self, heroes: list[Hero]) -> Hero:
-        self.console.clear()
-        table = Table(title="영웅 선택")
-        table.add_column("이름", style="bold")
-        table.add_column("별명", style="magenta")
-        table.add_column("세력", style="green")
-        table.add_column("무력", justify="right")
-        table.add_column("지력", justify="right")
-        table.add_column("통솔", justify="right")
-        for h in heroes:
-            table.add_row(
-                h.name_ko, h.nickname, h.faction_id,
-                str(h.strength), str(h.intelligence), str(h.leadership)
-            )
-        self.console.print(table)
+    def choose_hero(self, heroes: list[Hero], state: GameState) -> Hero:
+        """Full-screen hero picker: left = list + detail, right = map + faction/position legend."""
+        _CLASS_KO: dict[str, str] = {
+            "warrior":    "무장 (武將)",
+            "strategist": "군사 (軍師)",
+            "ranger":     "유협 (遊俠)",
+            "rogue":      "의적 (義賊)",
+        }
 
-        display = [
-            f"{h.name_ko} ({h.nickname}) — 무력:{h.strength} 지력:{h.intelligence} 통솔:{h.leadership}"
-            for h in heroes
-        ]
-        ids = [h.id for h in heroes]
-        chosen_id = _select("플레이할 영웅을 선택하세요 (↑↓ + Enter)", ids, display)
-        return next(h for h in heroes if h.id == chosen_id)
+        cursor = [0]
+        confirmed: list[Optional[Hero]] = [None]
+
+        def left_text() -> list[tuple[str, str]]:
+            h = heroes[cursor[0]]
+            class_ko = _CLASS_KO.get(h.hero_class.value, h.hero_class.value)
+            faction = state.factions.get(h.faction_id)
+            fname = faction.name_ko if faction else "무소속"
+            fc = faction.color if faction else "bright_black"
+            ptk_fc = self._RICH_TO_PTK.get(fc, "")
+            town = state.towns.get(h.current_town)
+            tname = town.name_ko if town else "?"
+
+            lines: list[tuple[str, str]] = [
+                ("bold underline", " 영웅 선택\n"),
+                ("", "─" * 32 + "\n"),
+            ]
+            for i, hero in enumerate(heroes):
+                marker = "▶" if i == cursor[0] else " "
+                style = "bold fg:ansiyellow reverse" if i == cursor[0] else "fg:ansibrightblack"
+                lines.append((style, f" {marker} {hero.name_ko}  「{hero.nickname}」\n"))
+
+            lines += [
+                ("", "─" * 32 + "\n"),
+                ("bold fg:ansicyan", f" {h.name_ko} ({h.name_zh})\n"),
+                ("bold fg:ansimagenta", f" 「{h.nickname}」\n"),
+                ("fg:ansibrightblack", f" {class_ko}\n"),
+                ("", "\n"),
+                ("", f" 무력  {h.strength:2d}  지력  {h.intelligence:2d}\n"),
+                ("", f" 기민  {h.agility:2d}  통솔  {h.leadership:2d}\n"),
+                ("", f" 명성  {h.reputation}\n"),
+                ("", "\n"),
+                ("fg:ansibrightblack", " 출발지: "),
+                ("bold fg:ansiyellow", f"{tname}\n"),
+                (ptk_fc, f" 세력:   {fname}\n"),
+                ("", "\n"),
+            ]
+            if h.description:
+                desc = h.description
+                wrap_w = 30
+                while len(desc) > wrap_w:
+                    lines.append(("fg:ansibrightblack", f" {desc[:wrap_w]}\n"))
+                    desc = desc[wrap_w:]
+                if desc:
+                    lines.append(("fg:ansibrightblack", f" {desc}\n"))
+            lines += [
+                ("", "\n"),
+                ("fg:ansibrightblack", " ↑↓  영웅 변경\n"),
+                ("fg:ansibrightgreen", " Enter  선택\n"),
+                ("fg:ansibrightred",   " q / Esc  시나리오로 돌아가기\n"),
+            ]
+            return lines
+
+        def map_text() -> list[tuple[str, str]]:
+            h = heroes[cursor[0]]
+            canvas, cw, ch_h = self._build_map_canvas(state, h.current_town)
+            lines: list[tuple[str, str]] = [
+                ("bold underline", " 전략 지도 — 세력 분포 · 영웅 위치\n")
+            ]
+            lines += self._canvas_to_ptk_tokens(canvas, cw, ch_h)
+            lines += self._map_legend_ptk_tokens()
+            lines += [("bold fg:ansiyellow", " [현재선택] = 노란 배경\n"), ("", "\n")]
+            lines.append(("bold underline", " 영웅 출발지\n"))
+            for hero in heroes:
+                t = state.towns.get(hero.current_town)
+                tname = t.name_ko if t else "?"
+                if hero is h:
+                    lines.append(("bold fg:ansiyellow", f"  ▶ {hero.name_ko}  →  {tname}\n"))
+                else:
+                    lines.append(("fg:ansibrightblack", f"     {hero.name_ko}  →  {tname}\n"))
+            return lines
+
+        kb = KeyBindings()
+
+        @kb.add("up")
+        def _up(event):
+            cursor[0] = (cursor[0] - 1) % len(heroes)
+            event.app.invalidate()
+
+        @kb.add("down")
+        def _down(event):
+            cursor[0] = (cursor[0] + 1) % len(heroes)
+            event.app.invalidate()
+
+        @kb.add("enter")
+        def _enter(event):
+            confirmed[0] = heroes[cursor[0]]
+            event.app.exit()
+
+        @kb.add("q")
+        @kb.add("escape")
+        def _back(event):
+            confirmed[0] = None
+            event.app.exit()
+
+        layout = Layout(
+            VSplit([
+                Window(content=FormattedTextControl(left_text), width=34),
+                Window(width=1, char="│"),
+                Window(content=FormattedTextControl(map_text)),
+            ])
+        )
+
+        Application(
+            layout=layout,
+            key_bindings=kb,
+            full_screen=True,
+            mouse_support=False,
+        ).run()
+
+        return confirmed[0]
 
     def show_turn_header(self, state: GameState) -> None:
         self.console.rule(f"[bold yellow]제 {state.turn} 턴 (남은 턴: {state.turns_remaining()})[/]")
@@ -602,10 +699,175 @@ class TerminalUI:
         self.console.print(message, justify="left")
 
     def show_setup_complete(self, state: GameState, hero: Hero) -> None:
-        self.console.print(
-            f"\n[bold green]게임 준비 완료![/] "
-            f"{hero.name_ko}의 여정이 {state.towns[hero.current_town].name_ko}에서 시작됩니다."
+        from rich.columns import Columns
+
+        self.console.clear()
+
+        faction = state.factions.get(hero.faction_id)
+        town = state.towns.get(hero.current_town)
+        faction_color = faction.color if faction else "white"
+        town_icon = self._TYPE_ICON.get(town.town_type, "") if town else ""
+
+        # ── Class & skill label tables ─────────────────────────────────────
+        _CLASS_KO: dict[str, str] = {
+            "warrior":    "무장 (武將)",
+            "strategist": "군사 (軍師)",
+            "ranger":     "유협 (遊俠)",
+            "rogue":      "의적 (義賊)",
+        }
+        _SKILL_KO: dict[str, str] = {
+            "righteous_call": "의협 소집", "leadership_aura": "지휘 기운", "pardon_plea": "사면 탄원",
+            "unrivaled_might": "천하무적", "spear_master": "창술 달인", "merchant_network": "상인 인맥",
+            "chain_stratagem": "연환계", "ambush_plan": "매복 계책", "spy_network": "첩자망",
+            "thunder_magic": "뇌법", "rain_call": "기우술", "taoist_arts": "도술",
+            "blade_dance": "대도술", "cavalry_charge": "기병 돌격", "suppress_rebels": "토벌 전법",
+            "serpent_spear": "장사 호기", "outlaw_rage": "무법 분노",
+            "thunderstrike": "벼락 일격", "berserker_rush": "광전사 돌진", "wolf_mace": "쌍봉 난무",
+            "twin_whips": "쌍편술", "iron_cavalry": "철갑 기병", "army_drill": "군사 훈련",
+            "eagle_eye": "매의 눈", "rapid_arrow": "속사술", "mounted_archery": "기마 궁술",
+            "noble_network": "귀족 인맥", "harbor_fugitive": "항구 은신", "big_purse": "큰 지갑",
+            "estate_guard": "장원 수비", "hidden_dart": "암기술", "logistics": "병참술",
+            "dignified_bear": "위엄 거인", "prison_break": "탈옥", "gallop_charge": "질풍 돌격",
+            "iron_staff": "철봉술", "uproot_willow": "발목술", "zen_fury": "선기 분노",
+            "tiger_slayer": "호랑이 사냥", "drunk_fist": "취권", "dual_blades": "쌍도",
+            "berserk": "광폭", "twin_axes": "쌍도끼", "unstoppable": "불굴",
+            "wrestling_master": "씨름 달인", "infiltrate": "잠입", "crossbow_ace": "쇠뇌 명수",
+            "river_swim": "도강술", "water_ambush": "수중 매복", "fish_merchant": "어물상",
+            "logistic_master": "군수 달인", "army_cook": "군 요리사", "morale_boost": "사기 고취",
+            "iron_rod": "철봉술", "night_patrol": "야간 순찰", "jailbreak": "탈옥술",
+        }
+
+        class_label = _CLASS_KO.get(hero.hero_class.value, hero.hero_class.value)
+
+        # ── Title panel ────────────────────────────────────────────────────
+        title_text = (
+            f"[bold yellow]{hero.name_ko}[/]  [dim]({hero.name_zh})[/]  "
+            f"[bold magenta]「{hero.nickname}」[/]\n"
+            f"[dim]계열:[/] [{faction_color}]{class_label}[/]   "
+            f"[dim]출발지:[/] [cyan]{town_icon} {town.name_ko if town else '?'}[/]   "
+            f"[dim]소속:[/] [{faction_color}]{faction.name_ko if faction else '무소속'}[/]"
         )
+        self.console.print(Panel(
+            title_text,
+            title="[bold yellow]✦  영웅 소개  ✦[/]",
+            border_style="yellow",
+            padding=(1, 4),
+        ))
+        self.console.print()
+
+        # ── Description ────────────────────────────────────────────────────
+        if hero.description:
+            self.console.print(Panel(
+                f"[italic]{hero.description}[/]",
+                title="[dim]인물 배경[/]",
+                border_style="dim white",
+            ))
+            self.console.print()
+
+        # ── Stat bar helper ────────────────────────────────────────────────
+        def _bar(val: int, mx: int = 10) -> str:
+            filled = round(val * 8 / mx)
+            return "[yellow]" + "█" * filled + "[/][dim]" + "░" * (8 - filled) + "[/]"
+
+        # ── Ability stats panel ────────────────────────────────────────────
+        stats_lines = [
+            f"[bold]무력[/]   {_bar(hero.strength)}  [cyan]{hero.strength:2d}[/]",
+            f"[bold]지력[/]   {_bar(hero.intelligence)}  [cyan]{hero.intelligence:2d}[/]",
+            f"[bold]기민[/]   {_bar(hero.agility)}  [cyan]{hero.agility:2d}[/]",
+            f"[bold]통솔[/]   {_bar(hero.leadership)}  [cyan]{hero.leadership:2d}[/]",
+            "",
+            f"[bold]명성[/]   [cyan]{hero.reputation}[/]",
+        ]
+        stats_panel = Panel(
+            "\n".join(stats_lines),
+            title="[bold]능력치[/]",
+            border_style="cyan",
+        )
+
+        # ── Possessions & power panel (가진 것들) ──────────────────────────
+        skills_display = [
+            f"  · {_SKILL_KO.get(s, s.replace('_', ' '))}"
+            for s in hero.skills
+        ]
+        items_lines = [
+            f"[bold]병력[/]   [green]{hero.current_army:,}[/]",
+            f"[bold]체력[/]   [green]{hero.hp} / {hero.max_hp}[/]",
+            f"[bold]행동력[/] [green]{hero.action_points} AP[/]",
+            "",
+            "[bold]보유 기술[/]",
+        ] + (skills_display if skills_display else ["  [dim](기술 없음)[/]"])
+        items_panel = Panel(
+            "\n".join(items_lines),
+            title="[bold]가진 것들[/]",
+            border_style="green",
+        )
+
+        self.console.print(Columns([stats_panel, items_panel], equal=True, expand=True))
+        self.console.print()
+
+        # ── Companions panel (동료) ────────────────────────────────────────
+        if hero.faction_id != "neutral":
+            companions = [
+                h for h in state.heroes.values()
+                if h.id != hero.id and h.faction_id == hero.faction_id
+            ][:6]
+            comp_title = "동료 — 같은 세력"
+        else:
+            companions = [
+                h for h in state.heroes.values()
+                if h.id != hero.id and h.current_town == hero.current_town
+            ][:6]
+            comp_title = "동료 — 같은 지역"
+
+        if companions:
+            comp_lines = [
+                f"[bold]{c.name_ko}[/] [dim]{c.nickname}[/]  "
+                f"[bright_blue]{_CLASS_KO.get(c.hero_class.value, '')}[/]"
+                for c in companions
+            ]
+        else:
+            comp_lines = ["[dim](알려진 동료 없음)[/]"]
+
+        companions_panel = Panel(
+            "\n".join(comp_lines),
+            title=f"[bold magenta]{comp_title}[/]",
+            border_style="magenta",
+        )
+
+        # ── Faction panel (세력) ───────────────────────────────────────────
+        if faction:
+            controlled = [
+                state.towns[tid].name_ko
+                for tid in faction.controlled_towns
+                if tid in state.towns
+            ]
+            controlled_str = (
+                "  ".join(f"[cyan]{n}[/]" for n in controlled)
+                if controlled else "[dim]없음[/]"
+            )
+            faction_lines = [
+                f"[bold]세력명[/]  [{faction_color}]{faction.name_ko} ({faction.name_zh})[/]",
+                "",
+                f"[bold]금전[/]   [yellow]{faction.gold:,}[/]",
+                f"[bold]군량[/]   [yellow]{faction.food:,}[/]",
+                f"[bold]명성[/]   [yellow]{faction.prestige}[/]",
+                "",
+                "[bold]점령 거점[/]",
+                f"  {controlled_str}",
+            ]
+        else:
+            faction_lines = ["[dim]소속 세력 없음[/]"]
+
+        faction_panel = Panel(
+            "\n".join(faction_lines),
+            title="[bold]내 세력[/]",
+            border_style=faction_color if faction else "dim",
+        )
+
+        self.console.print(Columns([companions_panel, faction_panel], equal=True, expand=True))
+        self.console.print()
+
+        questionary.press_any_key_to_continue("[ Enter ] 또는 아무 키나 눌러 첫 턴을 시작하세요...", style=_STYLE)
 
     def show_game_over(self, state: GameState) -> None:
         self.console.clear()

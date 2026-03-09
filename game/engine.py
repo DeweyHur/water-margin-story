@@ -54,19 +54,32 @@ class GameEngine:
         all_heroes = self._load_hero_roster()
         all_scenarios = self._load_scenarios()
 
-        # 1. Scenario selection
-        scenario = self.ui.choose_scenario(all_scenarios)
-        self._apply_scenario(scenario, all_heroes)
-        self.state.max_turns = scenario["max_turns"]
-        self.state.dynasty_stability = scenario["dynasty_stability"]
+        while True:
+            # 1. Scenario selection
+            scenario = self.ui.choose_scenario(all_scenarios)
+            self._apply_scenario(scenario, all_heroes)
+            self.state.max_turns = scenario["max_turns"]
+            self.state.dynasty_stability = scenario["dynasty_stability"]
 
-        # 2. Hero selection — only playable heroes for this scenario
-        playable_ids = set(scenario.get("playable_heroes", []))
-        playable = [h for h in all_heroes if h.id in playable_ids]
-        if not playable:
-            playable = all_heroes  # fallback
+            # 2. Hero selection — only playable heroes for this scenario
+            playable_ids = set(scenario.get("playable_heroes", []))
+            playable = [h for h in all_heroes if h.id in playable_ids]
+            if not playable:
+                playable = all_heroes  # fallback
 
-        chosen = self.ui.choose_hero(playable)
+            chosen = self.ui.choose_hero(playable, self.state)
+            if chosen is None:
+                # User pressed back — restart from scenario selection
+                self.state = GameState()
+                self.turn_manager = TurnManager(self.state)
+                self.event_system = EventSystem(self.state)
+                self.combat_manager = CombatManager(self.state)
+                # Re-populate base data so map/towns are available next iteration
+                self._load_factions()
+                self._load_towns()
+                continue
+            break
+
         chosen.is_player_controlled = True
         chosen.player_id = "player1"
         self.state.heroes[chosen.id] = chosen
