@@ -25,3 +25,6 @@ water-margin = "main:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["agents*", "tasks*", "models*", "game*", "tools*", "ui*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

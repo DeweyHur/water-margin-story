@@ -196,7 +196,9 @@ towns:
     food_yield: 260
     defense_level: 5
     wall_hp: 110
-    max_wall_hp: 110    admin_level: 6    adjacent: [dongping, dengzhou]
+    max_wall_hp: 110
+    admin_level: 6
+    adjacent: [dongping, dengzhou]
     garrison_strength: 5
     controlled_by_faction: imperial
     description: "화영(花榮)과 진명(秦明)이 군관으로 있는 산동 동부의 요지."
