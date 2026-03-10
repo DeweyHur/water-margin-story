@@ -168,6 +168,7 @@ class GameEngine:
 
     def _process_turn(self) -> None:
         self.state.turn += 1
+        ai_logs: list[str] = []
 
         # 1. Resource Production
         self._produce_resources()
@@ -183,13 +184,24 @@ class GameEngine:
             if not hero.is_alive():
                 continue
             hero.restore_action_points()
+
+            # Followers move with their leader and do not take a separate turn.
+            if hero.following_hero_id:
+                leader = self.state.heroes.get(hero.following_hero_id)
+                if leader and leader.is_alive():
+                    hero.current_town = leader.current_town
+                continue
+
             if hero.is_player_controlled:
                 self.turn_manager.player_turn(hero, self.ui)
             else:
-                self.turn_manager.ai_turn(hero)
+                ai_logs.extend(self.turn_manager.ai_turn(hero))
 
         # 4. Random events
         self.event_system.fire_random_events()
+
+        if ai_logs:
+            self.ui.show_ai_turn_summary(ai_logs)
 
     def _produce_resources(self) -> None:
         """Collect gold and food from controlled towns, scaled by admin_level."""

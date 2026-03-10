@@ -42,6 +42,7 @@ class Hero(BaseModel):
     action_points: int = 3
     is_player_controlled: bool = False
     player_id: Optional[str] = None   # None → AI-controlled
+    following_hero_id: Optional[str] = None  # If set, auto-follow this hero during movement
 
     def is_alive(self) -> bool:
         return self.hp > 0

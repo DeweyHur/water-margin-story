@@ -31,7 +31,7 @@ towns:
     defense_level: 7
     wall_hp: 140
     max_wall_hp: 140
-    adjacent: [yanmen, yanzhou, zhending, daming, weizhou]
+    adjacent: [yanmen, yanzhou, zhending, weizhou]
     garrison_strength: 6
     controlled_by_faction: imperial
 
@@ -82,7 +82,7 @@ towns:
     wall_hp: 140
     max_wall_hp: 140
     admin_level: 7
-    adjacent: [taiyuan, zhending, cangzhou, xiangzhou, yunzhou]
+    adjacent: [zhending, cangzhou, xiangzhou, yunzhou]
     garrison_strength: 7
     controlled_by_faction: imperial
     description: "北京대명부. 노준의(盧俊義)가 거부로 사는 북방 최대 도시 중 하나."
@@ -150,7 +150,7 @@ towns:
     wall_hp: 100
     max_wall_hp: 100
     admin_level: 2
-    adjacent: [yunzhou, dongping, jizhou]
+    adjacent: [yunzhou, dongping, jizhou, bianjing]
     garrison_strength: 5
     controlled_by_faction: liangshan
     description: "거대한 늪지 위의 요새. 108 호한의 본거지. 수전(水戰)에 유리하다."
@@ -267,7 +267,7 @@ towns:
     wall_hp: 200
     max_wall_hp: 200
     admin_level: 9
-    adjacent: [xiangzhou, mengzhou, dongchang, huazhou]
+    adjacent: [xiangzhou, mengzhou, dongchang, huazhou, liangshan]
     garrison_strength: 10
     controlled_by_faction: imperial
     gao_qiu_presence: 3

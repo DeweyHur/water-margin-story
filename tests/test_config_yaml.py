@@ -112,3 +112,18 @@ def test_scenario_army_scales_with_year():
         assert totals[i] >= totals[i - 1], (
             f"Scenario {i+1} total armies ({totals[i]}) < scenario {i} ({totals[i-1]})"
         )
+
+
+def test_towns_key_adjacency_expectations():
+    data = _load("towns.yaml")
+    towns = {t["id"]: t for t in data["towns"]}
+
+    daming_adj = set(towns["daming"].get("adjacent", []))
+    taiyuan_adj = set(towns["taiyuan"].get("adjacent", []))
+    liangshan_adj = set(towns["liangshan"].get("adjacent", []))
+    bianjing_adj = set(towns["bianjing"].get("adjacent", []))
+
+    assert "taiyuan" not in daming_adj
+    assert "daming" not in taiyuan_adj
+    assert "bianjing" in liangshan_adj
+    assert "liangshan" in bianjing_adj

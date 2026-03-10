@@ -119,6 +119,18 @@ class TestDoMove:
         self._call(hero, state, None)
         assert hero.current_town == "liangshan"
 
+    def test_followers_move_together(self):
+        leader = make_hero(hero_id="leader", current_town="liangshan")
+        follower = make_hero(hero_id="follower", current_town="liangshan")
+        follower.following_hero_id = "leader"
+        src = make_town("liangshan", adjacent=["bianjing"])
+        dst = make_town("bianjing")
+        state = make_state(leader, src, dst)
+        state.heroes[follower.id] = follower
+        self._call(leader, state, "bianjing")
+        assert leader.current_town == "bianjing"
+        assert follower.current_town == "bianjing"
+
 
 # ── _do_recruit ──────────────────────────────────────────────────────────────
 
@@ -174,6 +186,50 @@ class TestDoRecruit:
         TurnManager(state_high)._do_recruit(hero_high, make_ui())
 
         assert hero_high.current_army > hero_low.current_army
+
+
+# ── _do_rally_party ─────────────────────────────────────────────────────────
+
+class TestDoRallyParty:
+    def test_rally_adds_companion_as_player_follower(self):
+        leader = make_hero(hero_id="leader", current_town="liangshan", faction="liangshan")
+        leader.is_player_controlled = True
+        leader.player_id = "player1"
+        candidate = make_hero(hero_id="candidate", current_town="liangshan", faction="liangshan")
+        town = make_town("liangshan", faction="liangshan")
+        state = make_state(leader, town)
+        state.heroes[candidate.id] = candidate
+
+        ui = make_ui()
+        ui.choose_party_candidate.return_value = "candidate"
+
+        from game.turn_manager import TurnManager
+        ok = TurnManager(state)._do_rally_party(leader, ui)
+
+        assert ok is True
+        assert candidate.is_player_controlled is True
+        assert candidate.player_id == "player1"
+        assert candidate.following_hero_id == "leader"
+
+    def test_neutral_leader_can_contact_neutral_talent(self):
+        leader = make_hero(hero_id="leader", current_town="dongping", faction="neutral")
+        leader.is_player_controlled = True
+        leader.player_id = "player1"
+        candidate = make_hero(hero_id="candidate", current_town="dongping", faction="neutral")
+        town = make_town("dongping", faction="imperial")
+        state = make_state(leader, town)
+        state.heroes[candidate.id] = candidate
+
+        ui = make_ui()
+        ui.choose_party_candidate.return_value = "candidate"
+
+        from game.turn_manager import TurnManager
+        ok = TurnManager(state)._do_rally_party(leader, ui)
+
+        assert ok is True
+        assert candidate.is_player_controlled is True
+        assert candidate.player_id == "player1"
+        assert candidate.following_hero_id == "leader"
 
 
 # ── _do_rest ─────────────────────────────────────────────────────────────────

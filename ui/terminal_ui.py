@@ -282,6 +282,24 @@ class TerminalUI:
                 )
                 self.console.print(Panel(status, title="세력 현황", border_style="blue"))
 
+    def show_ai_turn_summary(self, logs: list[str]) -> None:
+        import questionary as _q
+
+        if not logs:
+            return
+
+        lines = [f"  [dim]•[/] {line}" for line in logs[:14]]
+        if len(logs) > 14:
+            lines.append(f"  [dim]•[/] ... 외 {len(logs) - 14}건")
+
+        self.console.print(Panel(
+            "\n".join(lines),
+            title="[bold red]상대 AI 턴 요약[/]",
+            border_style="red",
+            padding=(1, 2),
+        ))
+        _q.press_any_key_to_continue("[ 아무 키 ] AI 턴 결과 확인 후 계속...").ask()
+
     def _get_map_grid_data(self, state: GameState) -> tuple[dict[str, tuple[int, int]], int, int, dict[tuple[int, int], str]]:
         """Prepares coordinate and grid size data for map rendering."""
         towns = list(state.towns.values())
@@ -522,6 +540,24 @@ class TerminalUI:
         _is_neutral = hero.faction_id == "neutral"
         _has_faction = hero.faction_id != "neutral" and state.factions.get(hero.faction_id) is not None
         _can_join = _is_neutral and town.controlled_by_faction is not None
+        _is_enemy_town = town.controlled_by_faction not in (hero.faction_id, None)
+        contactable = []
+        for h in state.heroes.values():
+            if h.id == hero.id or not h.is_alive() or h.current_town != hero.current_town:
+                continue
+            if h.is_player_controlled or h.following_hero_id:
+                continue
+            if hero.faction_id == "neutral":
+                if h.faction_id == "neutral":
+                    contactable.append(h)
+            else:
+                if h.faction_id in (hero.faction_id, "neutral"):
+                    contactable.append(h)
+        companions = [
+            h for h in state.heroes.values()
+            if h.following_hero_id == hero.id and h.is_alive()
+        ]
+        party_army = hero.current_army + sum(h.current_army for h in companions)
 
         # Class-specific action labels
         _class_action_labels = {
@@ -531,6 +567,9 @@ class TerminalUI:
             _HeroClass.ROGUE:      "잠입       — 적 거점 침투·탈취 (기민)",
         }
         _class_label = _class_action_labels.get(hero.hero_class, "특기       — 전용 행동")
+        _class_action_available = True
+        if hero.hero_class in (_HeroClass.WARRIOR, _HeroClass.ROGUE):
+            _class_action_available = _is_enemy_town
 
         choices: list[tuple[str, str]] = [
             ("move",        "이동       — 인접 지역으로 이동"),
@@ -542,7 +581,10 @@ class TerminalUI:
         else:
             if hero.current_army > 0 or not _is_neutral:
                 choices.append(("siege", "공성       — 마을 점령 시도"))
-        choices.append(("class_action", _class_label))
+        if contactable:
+            choices.append(("rally", "집결       — 같은 지역 인재 컨택·동행 영입"))
+        if _class_action_available:
+            choices.append(("class_action", _class_label))
         if _can_join:
             choices.append(("join", "합류       — 현 세력에 가담"))
         _rest_desc = "휴식       — HP 회복 + 병력 보충" if _is_own else "휴식       — HP 회복 + 현지 탐문"
@@ -594,6 +636,8 @@ class TerminalUI:
                 ("fg:ansibrightblack", " 세력  : "),
                 (fcolor or "bold", f"{fname}\n"),
                 ("", f" 병력  : {hero.current_army:,}  AP: {hero.action_points}\n"),
+                ("fg:ansibrightblack", " 파티병력: "),
+                ("bold fg:ansigreen", f"{party_army:,}\n"),
             ]
             if faction:
                 lines += [
@@ -611,6 +655,26 @@ class TerminalUI:
                 ("bold fg:ansiyellow", f"{_stat_val}/10  "),
                 ("fg:ansibrightblack", f"({_class_label[:4]})\n"),
             ]
+            lines += [
+                ("fg:ansibrightblack", " 동행  : "),
+                ("", f"{len(companions)}명\n"),
+            ]
+            if companions:
+                names = ", ".join(h.name_ko for h in companions[:2])
+                extra = "" if len(companions) <= 2 else f" 외 {len(companions)-2}명"
+                lines += [
+                    ("fg:ansibrightblack", "  └ "),
+                    ("fg:ansicyan", f"{names}{extra}\n"),
+                ]
+            lines += [
+                ("fg:ansibrightblack", " 컨택 가능: "),
+                ("", f"{len(contactable)}명\n"),
+            ]
+            if contactable:
+                for h in contactable[:3]:
+                    lines.append(("fg:ansibrightblack", f"  · {h.name_ko} ({h.hero_class.value})\n"))
+                if len(contactable) > 3:
+                    lines.append(("fg:ansibrightblack", f"  · 외 {len(contactable)-3}명\n"))
             lines += [
                 ("", "─" * 28 + "\n"),
                 ("bold underline", f" 현재 위치: {town.name_ko}\n"),
@@ -715,6 +779,22 @@ class TerminalUI:
 
         return result[0]
 
+    def choose_party_candidate(self, hero: Hero, candidates: list[Hero], state: GameState) -> Optional[str]:
+        labels = []
+        values = []
+        for h in candidates:
+            labels.append(
+                f"{h.name_ko} 「{h.nickname}」  무:{h.strength} 지:{h.intelligence} 기:{h.agility} 통:{h.leadership} 병:{h.current_army:,}"
+            )
+            values.append(h.id)
+
+        picked = _select(
+            f"동행 영웅 선택 — {hero.name_ko}과(와) 의기투합할 인물을 고르세요",
+            values,
+            labels,
+        )
+        return picked if picked else None
+
     def choose_destination(self, hero: Hero, town: Town, state: GameState) -> Optional[str]:
         """Full-screen map-based destination picker.
 
@@ -783,6 +863,7 @@ class TerminalUI:
                 ("fg:ansibrightblack", "= 이동 가능 지역\n"),
             ]
             return lines
+            
 
         kb = KeyBindings()
 
@@ -826,6 +907,30 @@ class TerminalUI:
 
     def show_message(self, message: str) -> None:
         self.console.print(message, justify="left")
+
+    def wait_for_continue(self, prompt: str = "[ 아무 키 ] 계속...") -> None:
+        import questionary as _q
+
+        _q.press_any_key_to_continue(prompt).ask()
+
+    def show_action_blocked(self, reason: str, details: list[str] | None = None) -> None:
+        """Show a detailed failure reason and wait for user acknowledgement."""
+        import questionary as _q
+
+        lines = [f"[bold red]행동 실패[/]", "", f"[white]{reason}[/]"]
+        if details:
+            lines.append("")
+            lines.append("[bold yellow]확인 사항[/]")
+            for item in details:
+                lines.append(f"  [dim]•[/] {item}")
+
+        self.console.print(Panel(
+            "\n".join(lines),
+            title="[bold red]진행 불가[/]",
+            border_style="red",
+            padding=(1, 2),
+        ))
+        _q.press_any_key_to_continue("[ 아무 키 ] 확인 후 행동 선택으로 돌아가기...").ask()
 
     def show_setup_complete(self, state: GameState, hero: Hero) -> None:
         from rich.columns import Columns

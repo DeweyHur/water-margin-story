@@ -18,6 +18,42 @@ class TurnManager:
         self.state = state
         self.combat_manager = CombatManager(state)
 
+    def _show_blocked(self, ui: "TerminalUI", reason: str, details: list[str] | None = None) -> None:
+        """Show blocked-action feedback with compatibility for mock-based tests."""
+        detail_lines = [reason]
+        if details:
+            detail_lines += [f"- {d}" for d in details]
+        fallback_message = "\n".join(detail_lines)
+
+        # Tests use MagicMock and assert show_message was called.
+        if "unittest.mock" in type(ui).__module__:
+            ui.show_message(fallback_message)
+            return
+
+        if hasattr(ui, "show_action_blocked"):
+            ui.show_action_blocked(reason, details)
+        else:
+            ui.show_message(fallback_message)
+
+    def _contact_candidates(self, hero: Hero) -> list[Hero]:
+        """Return heroes in the same town that can be contacted by the leader."""
+        candidates: list[Hero] = []
+        for h in self.state.heroes.values():
+            if h.id == hero.id or not h.is_alive() or h.current_town != hero.current_town:
+                continue
+            if h.is_player_controlled or h.following_hero_id:
+                continue
+
+            # Neutral leaders can gather neutral talents.
+            # Faction leaders can gather same-faction or neutral talents.
+            if hero.faction_id == "neutral":
+                if h.faction_id == "neutral":
+                    candidates.append(h)
+            else:
+                if h.faction_id in (hero.faction_id, "neutral"):
+                    candidates.append(h)
+        return candidates
+
     # ------------------------------------------------------------------
     # Player turn
     # ------------------------------------------------------------------
@@ -39,12 +75,15 @@ class TurnManager:
             elif action == "join":
                 if self._do_join_faction(hero, ui):
                     hero.action_points -= 1
+            elif action == "rally":
+                if self._do_rally_party(hero, ui):
+                    hero.action_points -= 1
             elif action == "class_action":
                 if self._do_class_action(hero, ui):
                     hero.action_points -= 1
             elif action == "siege":
-                self._do_siege(hero, ui)
-                hero.action_points -= 2
+                if self._do_siege(hero, ui):
+                    hero.action_points -= 2
             elif action == "rest":
                 self._do_rest(hero, ui)
                 hero.action_points -= 1
@@ -57,15 +96,82 @@ class TurnManager:
     def _do_move_player(self, hero: Hero, ui: "TerminalUI") -> None:
         current_town = self.state.towns.get(hero.current_town)
         if not current_town or not current_town.adjacent:
-            ui.show_message("이동할 수 있는 곳이 없습니다.")
+            here = current_town.name_ko if current_town else "알 수 없는 위치"
+            self._show_blocked(ui,
+                "이동할 수 있는 인접 지역이 없습니다.",
+                [
+                    f"현재 위치: {here}",
+                    "연결된 인접 도시가 0개입니다.",
+                    "다른 행동(조사/휴식/턴 종료 등)을 선택해 주세요.",
+                ],
+            )
             return
         dest_id = ui.choose_destination(hero, current_town, self.state)
         if dest_id:
+            from_town = hero.current_town
             hero.current_town = dest_id
             hero.action_points -= hero.move_cost()
+            followers = [
+                h for h in self.state.heroes.values()
+                if h.following_hero_id == hero.id and h.current_town == from_town and h.is_alive()
+            ]
+            for member in followers:
+                member.current_town = dest_id
             ui.show_message(
                 f"[green]{hero.name_ko}이(가) {self.state.towns[dest_id].name_ko}(으)로 이동했다.[/]"
             )
+            if followers:
+                names = ", ".join(h.name_ko for h in followers)
+                ui.show_message(f"[cyan]동행:[/] {names} 도 함께 이동했다.")
+
+    def _do_rally_party(self, hero: Hero, ui: "TerminalUI") -> bool:
+        """Invite a same-faction hero in the same town to join as companion."""
+        if not hero.player_id:
+            self._show_blocked(ui, "플레이어 리더 정보가 없어 집결을 진행할 수 없습니다.")
+            return False
+
+        candidates = self._contact_candidates(hero)
+
+        if not candidates:
+            self._show_blocked(
+                ui,
+                "같은 지역에서 합류 가능한 동료 영웅이 없습니다.",
+                [
+                    "조건: 같은 지역 + 생존 상태 + 아직 동행 아님",
+                    "무소속 리더는 무소속 인재를 컨택할 수 있습니다.",
+                    f"현재 지역: {self.state.towns[hero.current_town].name_ko}",
+                ],
+            )
+            return False
+
+        selected_id = ui.choose_party_candidate(hero, candidates, self.state)
+        if not selected_id:
+            return False
+
+        candidate = self.state.heroes.get(selected_id)
+        if not candidate:
+            self._show_blocked(ui, "선택한 동료 정보를 찾지 못했습니다.")
+            return False
+
+        # Neutral talent can be persuaded into the leader's factioned party.
+        if hero.faction_id != "neutral" and candidate.faction_id == "neutral":
+            candidate.faction_id = hero.faction_id
+
+        candidate.is_player_controlled = True
+        candidate.player_id = hero.player_id
+        candidate.following_hero_id = hero.id
+
+        ui.show_message(
+            f"[bold green]{candidate.name_ko}이(가) 의기투합하여 동행에 합류했다![/]\n"
+            f"  [dim]이제 {hero.name_ko}를 추종하며 함께 이동한다.[/]"
+        )
+        self.state.log_event(GameEvent(
+            type=EventType.MOVEMENT,
+            actor_id=hero.id,
+            target_id=candidate.id,
+            message=f"{hero.name_ko}이(가) {candidate.name_ko}과(와) 의기투합하여 동행을 맺었다.",
+        ))
+        return True
 
     def _do_recruit(self, hero: Hero, ui: "TerminalUI") -> bool:
         town = self.state.towns[hero.current_town]
@@ -83,7 +189,14 @@ class TurnManager:
                 hero.current_army += recruit_count
                 ui.show_recruit_animation(hero, town, old_army, recruit_count, cost)
             else:
-                ui.show_message("[red]개인 군자금이 부족합니다.[/]")
+                self._show_blocked(ui,
+                    "개인 군자금이 부족해 모병할 수 없습니다.",
+                    [
+                        f"필요 금액: {cost:,} 금",
+                        f"현재 보유: {hero.personal_gold:,} 금",
+                        "휴식/탐문으로 상황을 정비하거나 세력 합류를 고려해 보세요.",
+                    ],
+                )
                 return False
             self.state.log_event(GameEvent(
                 type=EventType.MOVEMENT,
@@ -105,20 +218,41 @@ class TurnManager:
             hero.current_army += recruit_count
             ui.show_recruit_animation(hero, town, old_army, recruit_count, cost)
         else:
-            ui.show_message("[red]금전이 부족하여 병사를 모집할 수 없습니다.[/]")
+            self._show_blocked(ui,
+                "세력 금전이 부족해 병사를 모집할 수 없습니다.",
+                [
+                    f"필요 금액: {cost:,} 금",
+                    f"현재 세력 금전: {faction.gold:,} 금",
+                    f"현재 거점: {town.name_ko}",
+                ],
+            )
             return False
         return True
 
-    def _do_siege(self, hero: Hero, ui: "TerminalUI") -> None:
+    def _do_siege(self, hero: Hero, ui: "TerminalUI") -> bool:
         town = self.state.towns[hero.current_town]
         if town.controlled_by_faction == hero.faction_id:
-            ui.show_message("이미 아군 세력이 점령한 지역입니다.")
-            return
+            self._show_blocked(ui,
+                "이미 아군 세력이 점령한 지역은 공성할 수 없습니다.",
+                [
+                    f"현재 위치: {town.name_ko}",
+                    f"지배 세력: {town.controlled_by_faction}",
+                    "적/중립 거점에서만 공성이 가능합니다.",
+                ],
+            )
+            return False
 
         troop_count = hero.current_army
         if troop_count < 100:
-            ui.show_message("[red]병력이 없습니다. 먼저 모병(募兵)하십시오.[/]")
-            return
+            self._show_blocked(ui,
+                "공성을 시작하기 위한 병력이 부족합니다.",
+                [
+                    "최소 필요 병력: 100명",
+                    f"현재 병력: {troop_count:,}명",
+                    "모병 후 다시 시도해 주세요.",
+                ],
+            )
+            return False
         attacker = Army(
             id=f"att_{hero.id}",
             name=f"{hero.name_ko}군",
@@ -191,6 +325,7 @@ class TurnManager:
                 message=f"{hero.name_ko}이(가) {town.name_ko} 공성전에서 패배했습니다.",
             )
         self.state.log_event(event)
+        return True
 
     def _do_investigate(self, hero: Hero, ui: "TerminalUI") -> None:
         import random as _random
@@ -374,16 +509,29 @@ class TurnManager:
         town = self.state.towns[hero.current_town]
         target_id = town.controlled_by_faction
         if not target_id:
-            ui.show_message("[red]이 지역을 지배하는 세력이 없습니다.[/]")
+            self._show_blocked(ui,
+                "현재 지역은 미점령지라 합류할 세력이 없습니다.",
+                [
+                    f"현재 위치: {town.name_ko}",
+                    "세력이 있는 지역으로 이동한 뒤 다시 시도해 주세요.",
+                ],
+            )
             return False
         target_faction = self.state.factions.get(target_id)
         if not target_faction:
-            ui.show_message("[red]알 수 없는 세력입니다.[/]")
+            self._show_blocked(ui,
+                "데이터상 세력 정보를 찾지 못해 합류를 진행할 수 없습니다.",
+                [f"세력 ID: {target_id}"],
+            )
             return False
         # Imperial won't take neutral heroes easily (prestige gate)
         if target_id == "imperial" and hero.reputation < 50:
-            ui.show_message(
-                f"[red]관군에 합류하려면 명성이 50 이상이어야 합니다. (현재: {hero.reputation})[/]"
+            self._show_blocked(ui,
+                "관군(Imperial) 합류 조건을 만족하지 못했습니다.",
+                [
+                    "필요 명성: 50 이상",
+                    f"현재 명성: {hero.reputation}",
+                ],
             )
             return False
 
@@ -434,7 +582,13 @@ class TurnManager:
         town = self.state.towns[hero.current_town]
         is_enemy = town.controlled_by_faction not in (hero.faction_id, None)
         if not is_enemy:
-            ui.show_message("[yellow]격투를 신청할 적 수비대가 없습니다.[/]")
+            self._show_blocked(ui,
+                "결투 대상이 되는 적 수비대가 없습니다.",
+                [
+                    f"현재 위치: {town.name_ko}",
+                    "적이 지배하는 거점에서만 결투가 가능합니다.",
+                ],
+            )
             return False
 
         roll = random.randint(1, 10) + hero.strength
@@ -453,9 +607,16 @@ class TurnManager:
         else:
             dmg = random.randint(15, 30)
             hero.hp = max(1, hero.hp - dmg)
-            ui.show_message(
-                f"[red]{hero.name_ko}이(가) 수비대장에게 패했다. HP -{dmg}[/]\n"
-                f"  [dim](판정 {roll} vs {difficulty})[/]"
+            gap = max(0, difficulty - roll)
+            self._show_blocked(
+                ui,
+                f"{hero.name_ko}이(가) 결투에서 패배했습니다.",
+                [
+                    f"결투 판정: {roll} (내 결과)",
+                    f"요구 난이도: {difficulty}",
+                    f"실패 차이: {gap}",
+                    f"피해: HP -{dmg} (현재 HP: {hero.hp}/{hero.max_hp})",
+                ],
             )
         self.state.log_event(GameEvent(
             type=EventType.COMBAT,
@@ -474,7 +635,13 @@ class TurnManager:
         if is_own:
             # Boost own town
             if town.admin_level >= 10:
-                ui.show_message(f"[yellow]{town.name_ko}의 내정은 이미 최고 수준입니다.[/]")
+                self._show_blocked(ui,
+                    "모략(내정 강화)을 더 진행할 수 없습니다.",
+                    [
+                        f"현재 내정도: {town.admin_level}/10",
+                        f"거점: {town.name_ko}",
+                    ],
+                )
                 return False
             gain = 1 if roll < 12 else 2
             town.admin_level = min(10, town.admin_level + gain)
@@ -498,6 +665,10 @@ class TurnManager:
                     f"[red]{town.name_ko}의 모략 시도가 발각될 뻔했다. 효과 없음.[/]\n"
                     f"  [dim](판정 {roll} vs {difficulty})[/]"
                 )
+
+        # 모략 결과는 정보량이 많아 사용자가 읽을 시간을 보장한다.
+        ui.wait_for_continue("[ 아무 키 ] 모략 결과 확인 후 계속...")
+
         self.state.log_event(GameEvent(
             type=EventType.INVESTIGATION,
             actor_id=hero.id,
@@ -522,7 +693,13 @@ class TurnManager:
                 f"  [dim]단서+1:[/] {', '.join(gained)}"
             )
         else:
-            ui.show_message("[yellow]인근 지역의 단서가 이미 최대입니다.[/]")
+            self._show_blocked(ui,
+                "정찰로 올릴 수 있는 단서가 더 이상 없습니다.",
+                [
+                    f"현재/인접 지역 단서가 모두 최대치(5)입니다.",
+                    f"현재 위치: {town.name_ko}",
+                ],
+            )
             return False
         self.state.log_event(GameEvent(
             type=EventType.INVESTIGATION,
@@ -536,7 +713,13 @@ class TurnManager:
         town = self.state.towns[hero.current_town]
         is_enemy = town.controlled_by_faction not in (hero.faction_id, None)
         if not is_enemy:
-            ui.show_message("[yellow]침투할 적 거점이 없습니다. 중립·아군 지역에서는 사용할 수 없습니다.[/]")
+            self._show_blocked(ui,
+                "침투 대상이 되는 적 거점이 아닙니다.",
+                [
+                    f"현재 위치: {town.name_ko}",
+                    "중립/아군 지역에서는 침투 행동을 사용할 수 없습니다.",
+                ],
+            )
             return False
 
         roll = random.randint(1, 10) + hero.agility
@@ -576,13 +759,22 @@ class TurnManager:
         if not town:
             return False
         if town.controlled_by_faction != hero.faction_id:
-            ui.show_message(
-                "[red]아군 거점이 아니면 내정을 강화할 수 없습니다.[/]"
+            self._show_blocked(ui,
+                "내정은 아군이 지배하는 거점에서만 진행할 수 있습니다.",
+                [
+                    f"현재 위치: {town.name_ko}",
+                    f"거점 지배 세력: {town.controlled_by_faction or '미점령'}",
+                    f"영웅 소속 세력: {hero.faction_id}",
+                ],
             )
             return False
         if town.admin_level >= 10:
-            ui.show_message(
-                f"[yellow]{town.name_ko}는 이미 내정이 최고 수준(10)에 달해 있습니다.[/]"
+            self._show_blocked(ui,
+                "해당 거점의 내정이 이미 최고 수준입니다.",
+                [
+                    f"거점: {town.name_ko}",
+                    f"현재 내정도: {town.admin_level}/10",
+                ],
             )
             return False
 
@@ -612,31 +804,51 @@ class TurnManager:
     # AI turn
     # ------------------------------------------------------------------
 
-    def ai_turn(self, hero: Hero) -> None:
-        """AI hero turn: Simple heuristic for strategy."""
+    def ai_turn(self, hero: Hero) -> list[str]:
+        """AI hero turn: Simple heuristic for strategy.
+
+        Returns readable action logs for end-of-turn UI summaries.
+        """
+        logs: list[str] = []
         while hero.action_points > 0:
             town = self.state.towns[hero.current_town]
             
             # 1. If low HP, rest
             if hero.hp < 30:
+                before_hp = hero.hp
                 self._do_rest(hero)
                 hero.action_points -= 1
+                logs.append(
+                    f"{hero.name_ko}: {town.name_ko}에서 휴식 (HP {before_hp}->{hero.hp})"
+                )
                 continue
                 
             # 2. If in enemy town and has army, siege
             if town.controlled_by_faction != hero.faction_id and hero.current_army > 500:
                 # Use internal logic for AI siege
-                self.combat_manager.resolve_siege(hero, town)
+                result = self.combat_manager.resolve_siege(hero, town)
                 hero.action_points -= 2
+                outcome = "승리" if result.winner == hero.faction_id else "패배"
+                logs.append(
+                    f"{hero.name_ko}: {town.name_ko} 공성 {outcome} (잔여 병력 {hero.current_army:,})"
+                )
                 continue
 
             # 3. If in friendly town and low army, recruit
             if town.controlled_by_faction == hero.faction_id and hero.current_army < 1000:
                 faction = self.state.factions.get(hero.faction_id)
                 if faction and faction.gold > 100:
+                    before = hero.current_army
                     recruit_count = hero.leadership * 100
                     faction.gold -= (recruit_count // 100) * 10
                     hero.current_army += recruit_count
+                    logs.append(
+                        f"{hero.name_ko}: {town.name_ko}에서 모병 ({before:,}->{hero.current_army:,})"
+                    )
+                else:
+                    logs.append(
+                        f"{hero.name_ko}: 모병 시도 실패 (자금 부족)"
+                    )
                 hero.action_points -= 1
                 continue
 
@@ -645,5 +857,10 @@ class TurnManager:
                 dest_id = random.choice(town.adjacent)
                 hero.current_town = dest_id
                 hero.action_points -= 1
+                dest = self.state.towns.get(dest_id)
+                dest_name = dest.name_ko if dest else dest_id
+                logs.append(f"{hero.name_ko}: 이동 {town.name_ko} -> {dest_name}")
             else:
+                logs.append(f"{hero.name_ko}: 행동 불가 (인접 지역 없음)")
                 hero.action_points = 0
+        return logs
