@@ -253,6 +253,13 @@ class TerminalUI:
             mouse_support=False,
         ).run()
 
+        # Flush any leftover keystrokes (e.g. the Enter that dismissed this app)
+        import sys, termios
+        try:
+            termios.tcflush(sys.stdin, termios.TCIFLUSH)
+        except Exception:
+            pass
+
         return confirmed[0]
 
     def show_turn_header(self, state: GameState) -> None:
@@ -503,6 +510,7 @@ class TerminalUI:
             ("move",        "이동       — 인접 지역으로 이동"),
             ("investigate", "조사       — 현재 마을 탐문"),
             ("recruit",     "모병       — 병력 충원"),
+            ("admin",       "내정       — 거점 행정 강화 (세금·식량 증가)"),
             ("siege",       "공성       — 마을 점령 시도"),
             ("rest",        "휴식       — AP 회복"),
             ("map",         "지도       — 거점 정보 확인 (AP 소모 없음)"),
@@ -884,72 +892,245 @@ class TerminalUI:
     # Interactive map — left: town list, right: 2D grid map + detail
     # ------------------------------------------------------------------
 
+    def _show_town_detail(self, town_id: str, state: GameState) -> None:
+        """Rich-rendered detailed town panel, gated by clue_level."""
+        from rich.columns import Columns
+
+        town = state.towns.get(town_id)
+        if not town:
+            return
+
+        player_hero = state.get_player_hero()
+        is_player_town = player_hero and player_hero.current_town == town_id
+        clue = 5 if is_player_town else town.clue_level
+
+        faction = state.factions.get(town.controlled_by_faction or "")
+        faction_color = faction.color if faction else "bright_black"
+        type_label = self._TYPE_ICON.get(town.town_type, town.town_type)
+
+        HIDDEN = "[dim]???[/]"
+
+        def _bar(val: int, mx: int, width: int = 8) -> str:
+            filled = round(val * width / mx)
+            return "[yellow]" + "█" * filled + "[/][dim]" + "░" * (width - filled) + "[/]"
+
+        # ── Title ─────────────────────────────────────────────────────────
+        title_lines = [
+            f"[bold cyan]{town.name_ko}[/]  [dim]({town.name_zh})[/]  {type_label}",
+        ]
+        if clue >= 1:
+            fname = f"[{faction_color}]{faction.name_ko}[/]" if faction else "[dim]미점령[/]"
+            title_lines.append(f"[dim]세력:[/] {fname}")
+        else:
+            title_lines.append(f"[dim]세력:[/] {HIDDEN}")
+
+        adj_names = ", ".join(
+            state.towns[a].name_ko for a in town.adjacent if a in state.towns
+        ) or "없음"
+        title_lines.append(f"[dim]인접:[/] [bright_black]{adj_names}[/]")
+
+        clue_bar = "[yellow]" + "■" * clue + "[/][dim]" + "□" * (5 - clue) + "[/]"
+        if not is_player_town:
+            title_lines.append(f"[dim]단서:[/] {clue_bar}  {clue}/5")
+
+        self.console.print(Panel(
+            "\n".join(title_lines),
+            title=f"[bold yellow]지역 상세 정보[/]",
+            border_style="yellow",
+            padding=(0, 2),
+        ))
+        self.console.print()
+
+        # ── Left: Military / Economy ───────────────────────────────────────
+        mil_lines: list[str] = ["[bold underline]군사[/]\n"]
+        if clue >= 2:
+            mil_lines += [
+                f"[dim]수비 등급[/]  {_bar(town.defense_level, 10)}  {town.defense_level}/10",
+                f"[dim]수비대   [/]  {town.garrison_strength * 200:,}명",
+            ]
+        else:
+            mil_lines += [
+                f"[dim]수비 등급[/]  {HIDDEN}",
+                f"[dim]수비대   [/]  {HIDDEN}",
+            ]
+        if clue >= 3:
+            wall_pct = int(town.wall_hp / town.max_wall_hp * 100)
+            wbar = _bar(town.wall_hp, town.max_wall_hp)
+            mil_lines += [
+                f"[dim]성벽     [/]  {wbar}  {town.wall_hp}/{town.max_wall_hp}  ({wall_pct}%)",
+                f"[dim]주둔 가능[/]  {town.max_garrison:,}명",
+            ]
+        else:
+            mil_lines += [
+                f"[dim]성벽     [/]  {HIDDEN}",
+            ]
+
+        eco_lines: list[str] = ["\n[bold underline]경제[/]\n"]
+        if clue >= 1:
+            pop_ranges = [(0, 5000, "소규모"), (5000, 15000, "보통"), (15000, 30000, "대도시"), (30000, 999999, "거대도시")]
+            pop_label = next((lbl for lo, hi, lbl in pop_ranges if lo <= town.population < hi), "?")
+            eco_lines.append(f"[dim]인구[/]  {town.population:,}  [bright_black]({pop_label})[/]")
+        else:
+            eco_lines.append(f"[dim]인구[/]  {HIDDEN}")
+        if clue >= 2:
+            eco_lines += [
+                f"[dim]세금[/]  {town.tax_yield}/턴",
+                f"[dim]식량[/]  {town.food_yield}/턴",
+            ]
+        else:
+            eco_lines += [
+                f"[dim]세금[/]  {HIDDEN}",
+                f"[dim]식량[/]  {HIDDEN}",
+            ]
+
+        mil_panel = Panel(
+            "\n".join(mil_lines + eco_lines),
+            title="[bold]현황[/]",
+            border_style="cyan",
+        )
+
+        # ── Right: Intel / Heroes ─────────────────────────────────────────
+        intel_lines: list[str] = ["[bold underline]고구 관련 정보[/]\n"]
+        if is_player_town or clue >= 3:
+            if town.gao_qiu_presence == 0:
+                intel_lines.append("[dim]고구 흔적 없음[/]")
+            elif town.gao_qiu_presence == 1:
+                intel_lines.append("[yellow]고구 관련 인물이 통과했다는 소문[/]")
+            elif town.gao_qiu_presence == 2:
+                intel_lines.append("[yellow]고구 측근이 이 지역에 있었던 흔적[/]")
+            else:
+                intel_lines.append("[bold red]고구(高俅)가 이 지역에 있음 — 확인됨![/]")
+        else:
+            intel_lines.append(f"[dim]단서 부족 (조사 필요)[/]")
+
+        # Heroes in this town
+        heroes_here = [
+            h for h in state.heroes.values()
+            if h.current_town == town_id
+        ]
+        intel_lines.append("\n[bold underline]이 지역의 인물[/]\n")
+        if heroes_here:
+            for h in heroes_here:
+                is_player = h.is_player_controlled
+                prefix = "[bold yellow]★ [/]" if is_player else "  "
+                hfaction = state.factions.get(h.faction_id)
+                hcolor = hfaction.color if hfaction else "bright_black"
+                if clue >= 2 or is_player or h.faction_id == (player_hero.faction_id if player_hero else ""):
+                    intel_lines.append(
+                        f"{prefix}[bold]{h.name_ko}[/] [{hcolor}]{h.nickname}[/]\n"
+                        f"   [dim]{h.faction_id}[/]  병력 {h.current_army:,}"
+                    )
+                else:
+                    intel_lines.append(f"  [dim]??? (신원 불명)[/]")
+        else:
+            intel_lines.append("[dim](알려진 인물 없음)[/]")
+
+        # Town description
+        town_desc = getattr(town, "description", None)
+        if town_desc and clue >= 1:
+            intel_lines += ["\n[bold underline]배경[/]\n", f"[italic dim]{town_desc}[/]"]
+
+        intel_panel = Panel(
+            "\n".join(intel_lines),
+            title="[bold]정보[/]",
+            border_style="magenta",
+        )
+
+        self.console.print(Columns([mil_panel, intel_panel], equal=True, expand=True))
+        self.console.print()
+
+        import questionary as _q
+        _q.press_any_key_to_continue(" [ 아무 키 ] 지도로 돌아가기...").ask()
+
     def show_map(self, state: GameState) -> Optional[str]:
         """Full-screen 2D map with cursor navigation.
 
         Left panel  : town list (↑↓ to move cursor)
-        Right panel : ASCII 2D grid map + selected town detail
-        Enter = select town, Escape/q = cancel.
+        Right panel : ASCII 2D grid map + brief info
+        Enter = view detailed town info, Escape/q = close map.
         """
         towns = list(state.towns.values())
         town_by_id = {t.id: t for t in towns}
         cursor = [0]
-        result: list[Optional[str]] = [None]
+        open_detail: list[Optional[str]] = [None]
 
-        # Get grid data using the helper method
-        _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
+        player_hero = state.get_player_hero()
+        hero_town = player_hero.current_town if player_hero else ""
 
-        # ------------------------------------------------------------------
         def left_text() -> list[tuple[str, str]]:
             lines: list[tuple[str, str]] = [
                 ("bold underline", " 거점 목록\n"),
-                ("", "─" * 24 + "\n"),
+                ("", "─" * 28 + "\n"),
             ]
             for i, t in enumerate(towns):
-                faction = state.factions.get(t.controlled_by_faction)
-                fname = faction.name_ko[:4] if faction else "중립"
+                faction = state.factions.get(t.controlled_by_faction or "")
+                fcolor = self._RICH_TO_PTK.get(faction.color if faction else "bright_black", "")
+                is_here = t.id == hero_town
+                here_mark = "★" if is_here else " "
+                clue = 5 if is_here else t.clue_level
+
+                # Army icon based on garrison_strength
+                gs = t.garrison_strength
+                army_icon = "◉" if gs >= 8 else "●" if gs >= 5 else "○" if gs >= 2 else "·"
+                # Admin icon — only shown if player knows (own town or clue≥2)
+                admin_known = is_here or clue >= 2
+                adm = t.admin_level
+                admin_icon = ("▲" if adm >= 7 else "△" if adm >= 4 else "▽") if admin_known else "?"
+
                 if i == cursor[0]:
                     lines.append(("bold fg:ansiyellow reverse",
-                                  f" ▶ {t.name_ko:<7} {fname}\n"))
+                                  f" ▶ {here_mark}{t.name_ko:<6}\n"))
+                    faction_name = faction.name_ko[:4] if faction else "미점령"
+                    lines.append((fcolor or "fg:ansibrightblack",
+                                  f"   세력:{faction_name:<4}  정보:{clue}/5\n"))
+                    lines.append(("", f"   병:{army_icon}{gs}/10  내정:{admin_icon}{adm if admin_known else '?'}/10\n"))
                 else:
-                    lines.append(("", f"   {t.name_ko:<7} {fname}\n"))
-            lines += [("", "\n"), ("fg:ansibrightblack", " ↑↓이동  Enter선택  q취소")]
+                    lines.append(("",
+                                  f"   {here_mark}{t.name_ko:<6} {army_icon}{admin_icon}\n"))
+            lines += [("", "\n"),
+                      ("fg:ansibrightblack", " ↑↓  거점 변경\n"),
+                      ("fg:ansibrightgreen", " Enter  상세 보기\n"),
+                      ("fg:ansibrightred",   " q / Esc  닫기\n")]
             return lines
 
-        # ------------------------------------------------------------------
         def map_text() -> list[tuple[str, str]]:
             sel_id = towns[cursor[0]].id
             sel = town_by_id[sel_id]
-            player_hero = state.get_player_hero()
-            hero_town = player_hero.current_town if player_hero else ""
+            clue = 5 if sel_id == hero_town else sel.clue_level
 
             canvas, cw, ch_h = self._build_map_canvas(state, hero_town, sel_id)
             lines: list[tuple[str, str]] = [("bold underline", " 전략 지도\n")]
             lines += self._canvas_to_ptk_tokens(canvas, cw, ch_h)
             lines += self._map_legend_ptk_tokens()
 
-            # ── selected town detail ──────────────────────────────────────
-            faction = state.factions.get(sel.controlled_by_faction)
-            fname = faction.name_ko if faction else "중립 (미점령)"
-            wbar = "█" * int(sel.wall_integrity() * 8) + "░" * (8 - int(sel.wall_integrity() * 8))
-            adj = ", ".join(
-                town_by_id[a].name_ko for a in sel.adjacent if a in town_by_id
-            ) or "없음"
+            # Brief info for selected town
+            faction = state.factions.get(sel.controlled_by_faction or "")
+            fname = faction.name_ko if faction else "미점령"
+            fc = self._RICH_TO_PTK.get(faction.color if faction else "bright_black", "")
             type_label = self._TYPE_ICON.get(sel.town_type, sel.town_type)
+            HIDDEN = "???"
 
             lines += [
                 ("", "\n"),
                 ("bold fg:ansiyellow", f" ▶ {sel.name_ko} ({sel.name_zh})  {type_label}\n"),
-                ("", "─" * 52 + "\n"),
-                ("", f" 세력 : {fname:<14}  방어 : {'★' * sel.defense_level}{'☆' * (10 - sel.defense_level)}\n"),
-                ("", f" 성벽 : [{wbar}] {sel.wall_hp}/{sel.max_wall_hp}"
-                     f"   인구 : {sel.population:,}\n"),
-                ("", f" 세금 : {sel.tax_yield:<6} 식량 : {sel.food_yield}\n"),
-                ("fg:ansibrightblack", f" 인접 : {adj}\n"),
+                ("", "─" * 48 + "\n"),
+                ("fg:ansibrightblack", " 세력  : "), (fc, f"{fname}\n"),
             ]
+            if clue >= 2:
+                lines.append(("", f" 수비  : {'★' * sel.defense_level}{'☆' * (10 - sel.defense_level)}"
+                                   f"   병력 : {sel.garrison_strength * 200:,}\n"))
+            else:
+                lines.append(("fg:ansibrightblack", f" 수비  : {HIDDEN}   병력 : {HIDDEN}\n"))
+            if clue >= 1:
+                lines.append(("", f" 인구  : {sel.population:,}\n"))
+            else:
+                lines.append(("fg:ansibrightblack", f" 인구  : {HIDDEN}\n"))
+            clue_bar = "■" * clue + "□" * (5 - clue)
+            if sel_id != hero_town:
+                lines.append(("fg:ansibrightblack", f" 단서  : {clue_bar}  {clue}/5\n"))
+            lines.append(("fg:ansibrightgreen", " Enter → 상세 보기\n"))
             return lines
 
-        # ------------------------------------------------------------------
         kb = KeyBindings()
 
         @kb.add("up")
@@ -964,28 +1145,37 @@ class TerminalUI:
 
         @kb.add("enter")
         def _enter(event):
-            result[0] = towns[cursor[0]].id
+            open_detail[0] = towns[cursor[0]].id
             event.app.exit()
 
         @kb.add("escape")
         @kb.add("q")
         def _quit(event):
+            open_detail[0] = None
             event.app.exit()
 
         layout = Layout(
             VSplit([
-                Window(content=FormattedTextControl(left_text), width=26),
+                Window(content=FormattedTextControl(left_text), width=28),
                 Window(width=1, char="│"),
                 Window(content=FormattedTextControl(map_text)),
             ])
         )
 
-        Application(
-            layout=layout,
-            key_bindings=kb,
-            full_screen=True,
-            mouse_support=False,
-        ).run()
+        # Loop: map browse → detail view → back to map
+        while True:
+            open_detail[0] = None
+            Application(
+                layout=layout,
+                key_bindings=kb,
+                full_screen=True,
+                mouse_support=False,
+            ).run()
+            if open_detail[0] is None:
+                break
+            # Show detail then re-open map
+            self.console.clear()
+            self._show_town_detail(open_detail[0], state)
 
 
     def show_combat_preview(self, hero_town_id: str, target_town_id: str, state: GameState) -> None:

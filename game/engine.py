@@ -123,6 +123,20 @@ class GameEngine:
             if h and town_id in self.state.towns:
                 h.current_town = town_id
 
+        # Hero faction overrides (scenario can change faction_id based on story context)
+        hero_factions: dict[str, str] = scenario.get("hero_factions", {})
+        for hero_id, faction_id in hero_factions.items():
+            h = hero_by_id.get(hero_id)
+            if h:
+                h.faction_id = faction_id
+
+        # Hero starting armies
+        hero_armies: dict[str, int] = scenario.get("hero_armies", {})
+        for hero_id, army_size in hero_armies.items():
+            h = hero_by_id.get(hero_id)
+            if h:
+                h.current_army = army_size
+
 
     def _load_factions(self) -> None:
         with open(self._config_dir / "factions.yaml", encoding="utf-8") as f:
@@ -173,12 +187,14 @@ class GameEngine:
         self.event_system.fire_random_events()
 
     def _produce_resources(self) -> None:
-        """Collect gold and food from controlled towns."""
+        """Collect gold and food from controlled towns, scaled by admin_level."""
         for town in self.state.towns.values():
             if town.controlled_by_faction and town.controlled_by_faction in self.state.factions:
                 faction = self.state.factions[town.controlled_by_faction]
-                faction.gold += town.tax_yield
-                faction.food += town.food_yield
+                # admin_level 5 = 100% base, 1 = 20%, 10 = 200%
+                multiplier = town.admin_level / 5.0
+                faction.gold += int(town.tax_yield * multiplier)
+                faction.food += int(town.food_yield * multiplier)
 
     def _check_win_conditions(self) -> None:
         # Simplified win condition: Liangshan controls Bianjing or Gao Qiu is defeated

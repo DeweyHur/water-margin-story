@@ -27,7 +27,10 @@ class TurnManager:
             if action == "move":
                 self._do_move_player(hero, ui)
             elif action == "investigate":
-                self._do_investigate(hero)
+                self._do_investigate(hero, ui)
+                hero.action_points -= 1
+            elif action == "admin":
+                self._do_admin(hero, ui)
                 hero.action_points -= 1
             elif action == "recruit":
                 self._do_recruit(hero, ui)
@@ -144,12 +147,126 @@ class TurnManager:
             )
         self.state.log_event(event)
 
-    def _do_investigate(self, hero: Hero) -> None:
+    def _do_investigate(self, hero: Hero, ui: "TerminalUI") -> None:
+        import random as _random
+        from rich.panel import Panel
+        from rich.table import Table
+        from rich import box
+
         town = self.state.towns.get(hero.current_town)
         if not town:
             return
-        clue_gain = 1 + (hero.intelligence - 5) // 3
+
+        clue_gain = max(1, 1 + (hero.intelligence - 5) // 3)
+        old_level = town.clue_level
         town.clue_level = min(5, town.clue_level + clue_gain)
+
+        # ── 고구 위치 단서 ──────────────────────────────────────────────
+        gao_qiu_intel: str | None = None
+        gao_town = self.state.towns.get(self.state.gao_qiu_location)
+        gao_name = gao_town.name_ko if gao_town else "?"
+        # 고구가 현재 마을에 있으면 gao_qiu_presence 갱신
+        if hero.current_town == self.state.gao_qiu_location:
+            town.gao_qiu_presence = min(3, town.gao_qiu_presence + 1)
+        # 고구 intel: 단서 수준 + 지략에 따라 다른 수준 공개
+        reveal_roll = hero.intelligence + town.clue_level
+        if town.gao_qiu_presence >= 3:
+            gao_qiu_intel = f"[bold red]확인![/] 고구(高俅)가 이 지역에 머물고 있다."
+        elif town.gao_qiu_presence == 2:
+            gao_qiu_intel = f"[yellow]단서:[/] 고구의 측근이 이 지역에 있었다는 흔적이 있다."
+        elif hero.current_town == self.state.gao_qiu_location and reveal_roll >= 10:
+            gao_qiu_intel = f"[yellow]소문:[/] 고위 관리가 최근 이 지역을 지나갔다는 말이 돈다."
+        elif hero.current_town in (self.state.towns.get(self.state.gao_qiu_location, town)).adjacent and reveal_roll >= 12:
+            gao_qiu_intel = f"[dim]소문:[/] 인근 지역에서 대군의 이동이 목격됐다고 한다."
+
+        # ── 마을 정보 ──────────────────────────────────────────────────
+        faction = self.state.factions.get(town.controlled_by_faction or "")
+        faction_name = faction.name_ko if faction else "미점령"
+        _type_ko = {"village": "현(縣)", "fortress": "채(寨) / 요새", "metropolis": "부(府)"}
+        type_ko = _type_ko.get(town.town_type, town.town_type)
+        wall_pct = int(town.wall_hp / town.max_wall_hp * 100)
+        defense_bar = "█" * town.defense_level + "░" * (10 - town.defense_level)
+
+        # ── 지역 소문 풀 ───────────────────────────────────────────────
+        _RUMORS_BY_FACTION: dict[str, list[str]] = {
+            "imperial": [
+                "관군 병사들이 최근 증원됐다는 소문이 돈다.",
+                "세금 징수가 강화되어 주민들의 불만이 쌓이고 있다.",
+                "태위(太尉) 고구의 밀서가 이 지역 관리에게 전달됐다고 한다.",
+                "최근 관군 장교가 교체됐다. 새 지휘관이 엄격하다는 평이다.",
+                "포두(捕頭)들이 양산박 첩자를 색출하고 있다.",
+            ],
+            "liangshan": [
+                "양산박 사람들이 주민들에게 식량을 나눠줬다는 이야기가 있다.",
+                "이 지역 산채에서 훈련 소리가 들린다.",
+                "양산박으로 도망친 젊은이들이 는다.",
+                "호걸들이 인근에서 관군 수송대를 습격했다 한다.",
+            ],
+            "erlongshan": [
+                "승려 복장을 한 거한이 마을을 지나갔다는 말이 있다.",
+                "이룡산의 도적이 인근 상인을 습격했다.",
+            ],
+            "qingfeng": [
+                "청풍채 병사들이 식량 징발을 나왔다는 소문이 있다.",
+            ],
+            "jin": [
+                "금나라 상인들이 국경을 넘어 들어왔다.",
+                "북방에서 금나라 기병이 보였다는 피난민이 있다.",
+            ],
+            "liao": [
+                "요나라 돌격대가 안문관 근처에 나타났다는 소문이 있다.",
+            ],
+        }
+        _GENERIC_RUMORS = [
+            "주민들이 수군거린다. '천하가 어지럽다'고.",
+            "길손들 사이에 영웅을 기다린다는 말이 돈다.",
+            "관리들이 뇌물을 요구하며 행인을 괴롭히고 있다.",
+            "최근 흉작으로 유민이 늘고 있다.",
+            "이 지역에서 고수(高手)가 목격됐다는 소문이 있다.",
+        ]
+        faction_rumors = _RUMORS_BY_FACTION.get(town.controlled_by_faction or "", [])
+        all_rumors = faction_rumors + _GENERIC_RUMORS
+        num_rumors = min(len(all_rumors), 1 + (town.clue_level // 2))
+        rumors = _random.sample(all_rumors, num_rumors)
+
+        # ── 설명 단락이 있으면 표시 ────────────────────────────────────
+        town_desc = getattr(town, "description", None)
+
+        # ── 출력 ──────────────────────────────────────────────────────
+        bar_old = "■" * old_level + "□" * (5 - old_level)
+        bar_new = "■" * town.clue_level + "□" * (5 - town.clue_level)
+        clue_str = (
+            f"[dim]{bar_old}[/] → [bold yellow]{bar_new}[/]  "
+            f"({old_level} → [bold]{town.clue_level}[/] / 5)"
+        )
+
+        lines: list[str] = [
+            f"[bold cyan]{town.name_ko}[/] [dim]({town.name_zh})[/]  {type_ko}",
+            f"[dim]세력:[/]  {faction_name}   [dim]수비:[/] {defense_bar} {town.defense_level}/10",
+            f"[dim]성벽:[/]  {wall_pct}%  ({town.wall_hp}/{town.max_wall_hp})",
+            f"[dim]주민:[/]  {town.population:,}명   [dim]수비대:[/] {town.garrison_strength * 200:,}",
+            "",
+            f"[bold]단서 수준[/]  {clue_str}",
+        ]
+        if town_desc:
+            lines += ["", f"[italic dim]{town_desc}[/]"]
+        if rumors:
+            lines += ["", "[bold]입수한 소문[/]"]
+            for r in rumors:
+                lines.append(f"  [dim]·[/] {r}")
+        if gao_qiu_intel:
+            lines += ["", f"[bold]고구 행방[/]  {gao_qiu_intel}"]
+        elif town.clue_level < 3:
+            lines += ["", "[dim]고구 행방: 단서 부족 — 더 조사해야 한다.[/]"]
+
+        ui.console.print(Panel(
+            "\n".join(lines),
+            title=f"[bold yellow]조사 결과 — {hero.name_ko}[/]",
+            border_style="yellow",
+            padding=(1, 2),
+        ))
+        import questionary
+        questionary.press_any_key_to_continue("[ 아무 키 ] 계속...").ask()
 
         event = GameEvent(
             type=EventType.INVESTIGATION,
@@ -169,6 +286,63 @@ class TurnManager:
             type=EventType.MOVEMENT,
             actor_id=hero.id,
             message=f"{hero.name_ko}이(가) 휴식을 취해 {heal} HP를 회복했다.",
+        )
+        self.state.log_event(event)
+
+    def _do_admin(self, hero: Hero, ui: "TerminalUI") -> None:
+        """Increase admin_level of current town (must be controlled by player's faction)."""
+        from rich.panel import Panel
+
+        town = self.state.towns.get(hero.current_town)
+        if not town:
+            return
+        if town.controlled_by_faction != hero.faction_id:
+            ui.show_message(
+                "[red]아군 거점이 아니면 내정을 강화할 수 없습니다.[/]"
+            )
+            return
+        if town.admin_level >= 10:
+            ui.show_message(
+                f"[yellow]{town.name_ko}는 이미 내정이 최고 수준(10)에 달해 있습니다.[/]"
+            )
+            return
+
+        gain = max(1, hero.intelligence // 4)  # 지력이 높을수록 빠르게 올라감
+        old = town.admin_level
+        town.admin_level = min(10, town.admin_level + gain)
+
+        old_income_g = int(town.tax_yield * old / 5)
+        new_income_g = int(town.tax_yield * town.admin_level / 5)
+        old_income_f = int(town.food_yield * old / 5)
+        new_income_f = int(town.food_yield * town.admin_level / 5)
+
+        def _bar(val: int, mx: int = 10, width: int = 10) -> str:
+            filled = round(val * width / mx)
+            return "[yellow]" + "█" * filled + "[/][dim]" + "░" * (width - filled) + "[/]"
+
+        lines = [
+            f"[bold cyan]{town.name_ko}[/] 내정 강화",
+            "",
+            f"내정 수준  {_bar(old)} {old} → [bold yellow]{_bar(town.admin_level)} {town.admin_level}[/] / 10",
+            "",
+            f"세금 수입  [dim]{old_income_g}[/] → [bold green]{new_income_g}[/] / 턴",
+            f"식량 수입  [dim]{old_income_f}[/] → [bold green]{new_income_f}[/] / 턴",
+        ]
+        ui.console.print(Panel(
+            "\n".join(lines),
+            title=f"[bold yellow]내정 강화 — {hero.name_ko}[/]",
+            border_style="yellow",
+            padding=(1, 2),
+        ))
+
+        event = GameEvent(
+            type=EventType.MOVEMENT,
+            actor_id=hero.id,
+            target_id=hero.current_town,
+            message=(
+                f"{hero.name_ko}이(가) {town.name_ko} 내정을 강화했다. "
+                f"내정 수준: {old} → {town.admin_level}"
+            ),
         )
         self.state.log_event(event)
 

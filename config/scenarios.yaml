@@ -82,6 +82,17 @@ scenarios:
       cai_jing:   bianjing
       gao_yanei:  bianjing
       tong_guan:  bianjing
+    hero_armies:          # 시나리오 시작 시 각 영웅 병력
+      wu_yong:    500     # 양산박 왕륜 부대
+      lin_chong:  0       # 유배 직후, 단신
+      song_jiang: 0       # 문관 서리, 병력 없음
+      lu_zhishen: 600     # 수도사 신도·부랑자 무리
+      wu_song:    0       # 표랑 중, 단신
+      li_kui:     200     # 강주 잡역부 패거리
+      chai_jin:   500     # 귀족 사병
+      hua_rong:   800     # 청풍채 수비대
+      qin_ming:   1000    # 황통첩아 기병
+      gao_qiu:    5000    # 금군 직속 병력
 
   # ══════════════════════════════════════════════════════════════
   # 시나리오 2 — 1102년 강주의 혈서 (江州反詩)
@@ -151,6 +162,20 @@ scenarios:
       gao_qiu:     bianjing
       cai_jing:    bianjing
       tong_guan:   bianjing
+    hero_factions:
+      lin_chong:  liangshan
+      wu_yong:    liangshan
+      li_kui:     liangshan
+      zhang_shun: liangshan
+    hero_armies:          # 시나리오 시작 시 각 영웅 병력
+      lin_chong:  800     # 양산박 소대
+      song_jiang: 0       # 강주 옥중, 단신
+      lu_zhishen: 1000    # 이룡산 향하는 무리
+      wu_yong:    0       # 군사는 병력 없음
+      li_kui:     300     # 강주 패거리
+      hua_rong:   1000    # 청풍채 부대
+      qin_ming:   1500    # 기병 전대
+      gao_qiu:    6000    # 증강된 직속군
 
   # ══════════════════════════════════════════════════════════════
   # 시나리오 3 — 1103년 영웅들의 집결 (群雄聚義)
@@ -221,6 +246,29 @@ scenarios:
       cai_jing:   bianjing
       tong_guan:  bianjing
       huyan_zhuo: bianjing
+    hero_factions:
+      song_jiang: liangshan
+      lin_chong:  liangshan
+      lu_zhishen: liangshan
+      wu_yong:    liangshan
+      wu_song:    liangshan
+      li_kui:     liangshan
+      yan_qing:   liangshan
+      hua_rong:   liangshan
+      zhang_shun: liangshan
+    hero_armies:          # 시나리오 시작 시 각 영웅 병력
+      song_jiang: 3000    # 양산박 수령 직속 부대
+      lu_junyi:   4000    # 대명부 호족 사병단
+      lin_chong:  1500    # 기병 선봉대
+      lu_zhishen: 1200    # 이룡산 정예
+      wu_song:    800     # 경보병 유격
+      li_kui:     500     # 도끼 결사대
+      yan_qing:   200     # 정찰 소대
+      hua_rong:   1000    # 궁기병 부대
+      zhang_shun: 300     # 수군 선단
+      wu_yong:    0       # 군사, 직접 병력 없음
+      qin_ming:   2000    # 황통첩아 기병
+      gao_qiu:    8000    # 대규모 관군
 
   # ══════════════════════════════════════════════════════════════
   # 시나리오 4 — 1105년 천강성 108한 (一百單八將)
@@ -294,3 +342,29 @@ scenarios:
       cai_jing:   bianjing
       tong_guan:  bianjing
       aguda:      yanmen
+    hero_factions:
+      song_jiang: liangshan
+      lin_chong:  liangshan
+      lu_zhishen: liangshan
+      wu_yong:    liangshan
+      lu_junyi:   liangshan
+      wu_song:    liangshan
+      li_kui:     liangshan
+      yan_qing:   liangshan
+      chai_jin:   liangshan
+      hua_rong:   liangshan
+      zhang_shun: liangshan
+    hero_armies:          # 시나리오 시작 시 각 영웅 병력
+      song_jiang: 8000    # 양산박 수령, 전군 통솔
+      lu_junyi:   10000   # 양산박 2인자, 대명부 출신 대군
+      lin_chong:  3000    # 기병 주력
+      lu_zhishen: 2500    # 이룡산 정예 보병
+      wu_song:    2000    # 경보병 유격
+      li_kui:     2000    # 도끼 결사대
+      yan_qing:   500     # 정찰·특수부대
+      chai_jin:   1000    # 귀족 출신 사병단
+      hua_rong:   2000    # 궁기병 주력
+      zhang_shun: 800     # 수군 함대
+      wu_yong:    0       # 군사, 직접 병력 없음
+      qin_ming:   2000    # 관군 전향 장수
+      gao_qiu:    15000   # 금군 총동원

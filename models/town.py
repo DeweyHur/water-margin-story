@@ -26,6 +26,9 @@ class Town(BaseModel):
     gao_qiu_presence: int = Field(default=0, ge=0, le=3)  # 0=none 3=confirmed
     clue_level: int = Field(default=0, ge=0, le=5)
 
+    # Internal affairs
+    admin_level: int = Field(default=3, ge=1, le=10)  # 내정 수준 (1=방치, 10=완벽 통치), 수입 배율에 영향
+
     # Siege / battle fields (NEW)
     wall_hp: int = Field(default=100, ge=0)    # 성벽 HP
     max_wall_hp: int = Field(default=100, ge=1)

@@ -14,6 +14,7 @@ towns:
     defense_level: 8
     wall_hp: 160
     max_wall_hp: 160
+    admin_level: 5
     adjacent: [taiyuan, zhending]
     garrison_strength: 7
     controlled_by_faction: imperial
@@ -80,6 +81,7 @@ towns:
     defense_level: 7
     wall_hp: 140
     max_wall_hp: 140
+    admin_level: 7
     adjacent: [taiyuan, zhending, cangzhou, xiangzhou, yunzhou]
     garrison_strength: 7
     controlled_by_faction: imperial
@@ -147,6 +149,7 @@ towns:
     defense_level: 6
     wall_hp: 100
     max_wall_hp: 100
+    admin_level: 2
     adjacent: [yunzhou, dongping, jizhou]
     garrison_strength: 5
     controlled_by_faction: liangshan
@@ -193,8 +196,7 @@ towns:
     food_yield: 260
     defense_level: 5
     wall_hp: 110
-    max_wall_hp: 110
-    adjacent: [dongping, dengzhou]
+    max_wall_hp: 110    admin_level: 6    adjacent: [dongping, dengzhou]
     garrison_strength: 5
     controlled_by_faction: imperial
     description: "화영(花榮)과 진명(秦明)이 군관으로 있는 산동 동부의 요지."
@@ -262,6 +264,7 @@ towns:
     defense_level: 9
     wall_hp: 200
     max_wall_hp: 200
+    admin_level: 9
     adjacent: [xiangzhou, mengzhou, dongchang, huazhou]
     garrison_strength: 10
     controlled_by_faction: imperial
@@ -330,6 +333,7 @@ towns:
     defense_level: 2
     wall_hp: 60
     max_wall_hp: 60
+    admin_level: 2
     adjacent: [jiangzhou, luzhou]
     garrison_strength: 2
     controlled_by_faction: imperial
@@ -360,6 +364,7 @@ towns:
     defense_level: 4
     wall_hp: 100
     max_wall_hp: 100
+    admin_level: 7
     adjacent: [luzhou, suzhou]
     garrison_strength: 4
     controlled_by_faction: imperial
@@ -376,6 +381,7 @@ towns:
     defense_level: 4
     wall_hp: 100
     max_wall_hp: 100
+    admin_level: 7
     adjacent: [yangzhou, hangzhou]
     garrison_strength: 5
     controlled_by_faction: imperial
@@ -391,6 +397,7 @@ towns:
     defense_level: 5
     wall_hp: 120
     max_wall_hp: 120
+    admin_level: 8
     adjacent: [suzhou]
     garrison_strength: 6
     controlled_by_faction: imperial
