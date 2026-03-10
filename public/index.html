@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Water Margin Story - Web</title>
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div class="bg"></div>
+  <main class="app">
+    <section class="card setup" id="setup">
+      <h1>수호지 웹 플레이</h1>
+      <p>시나리오와 영웅을 선택해 시작하세요.</p>
+      <label>시나리오
+        <select id="scenario"></select>
+      </label>
+      <label>영웅
+        <select id="hero"></select>
+      </label>
+      <button id="startBtn">게임 시작</button>
+      <p class="hint">터미널 버전의 핵심 규칙을 웹으로 옮긴 MVP입니다.</p>
+    </section>
+
+    <section class="grid" id="game" hidden>
+      <div class="card status" id="status"></div>
+
+      <div class="card tools">
+        <h2>세션</h2>
+        <div class="buttons">
+          <button id="saveBtn">저장</button>
+          <button id="loadBtn">불러오기</button>
+          <button id="clearSaveBtn">저장 삭제</button>
+        </div>
+      </div>
+
+      <div class="card actions">
+        <h2>행동</h2>
+        <div id="actionButtons" class="buttons"></div>
+        <div id="moveWrap" class="inline" hidden>
+          <select id="destination"></select>
+          <button id="moveBtn">이동 실행</button>
+        </div>
+        <div id="rallyWrap" class="inline" hidden>
+          <select id="candidate"></select>
+          <button id="rallyBtn">집결 실행</button>
+        </div>
+      </div>
+
+      <div class="card map-panel">
+        <h2>지도</h2>
+        <div id="mapInfo" class="mapbox"></div>
+      </div>
+
+      <div class="card logs">
+        <h2>로그</h2>
+        <div id="messages" class="logbox"></div>
+      </div>
+
+      <div class="card logs">
+        <h2>AI 턴 요약</h2>
+        <div id="aiLogs" class="logbox"></div>
+      </div>
+    </section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

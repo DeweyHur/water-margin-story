@@ -1,0 +1,16 @@
+.git/
+.venv/
+.pytest_cache/
+.vscode/
+__pycache__/
+**/__pycache__/
+*.pyc
+tests/
+dev_crew/
+water_margin_story.egg-info/
+uv.lock
+pyproject.toml
+README.md
+bug_fix_report.txt
+build.py
+dev_smoke_test.py

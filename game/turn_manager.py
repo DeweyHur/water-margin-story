@@ -445,8 +445,11 @@ class TurnManager:
             border_style="yellow",
             padding=(1, 2),
         ))
-        import questionary
-        questionary.press_any_key_to_continue("[ 아무 키 ] 계속...").ask()
+        if hasattr(ui, "wait_for_continue"):
+            ui.wait_for_continue("[ 아무 키 ] 계속...")
+        else:
+            import questionary
+            questionary.press_any_key_to_continue("[ 아무 키 ] 계속...").ask()
 
         event = GameEvent(
             type=EventType.INVESTIGATION,
