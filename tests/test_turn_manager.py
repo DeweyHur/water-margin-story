@@ -292,6 +292,26 @@ class TestDoSiege:
         ui.show_message.assert_called_once()
         assert state.towns["liangshan"].controlled_by_faction == "liangshan"
 
+    def test_no_troops_refuses(self):
+        hero = make_hero(faction="liangshan", current_army=0, current_town="bianjing")
+        town = make_town("bianjing", faction="imperial")
+        state = make_state(hero, town)
+        ui = make_ui()
+        from game.turn_manager import TurnManager
+        TurnManager(state)._do_siege(hero, ui)
+        ui.show_message.assert_called_once()
+        assert state.towns["bianjing"].controlled_by_faction == "imperial"
+
+    def test_few_troops_refuses(self):
+        hero = make_hero(faction="liangshan", current_army=50, current_town="bianjing")
+        town = make_town("bianjing", faction="imperial")
+        state = make_state(hero, town)
+        ui = make_ui()
+        from game.turn_manager import TurnManager
+        TurnManager(state)._do_siege(hero, ui)
+        ui.show_message.assert_called_once()
+        assert state.towns["bianjing"].controlled_by_faction == "imperial"
+
     def test_win_changes_town_faction(self):
         hero = make_hero(faction="liangshan", current_army=3000, current_town="bianjing")
         town = make_town("bianjing", faction="imperial")

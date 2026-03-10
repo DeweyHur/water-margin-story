@@ -33,6 +33,7 @@ class Hero(BaseModel):
     loyalty: int = Field(default=100, ge=0, le=100) # Chance of betrayal
     skills: list[str] = Field(default_factory=list)  # Unique skill IDs
     current_army: int = 0   # Current number of troops commanded
+    personal_gold: int = 0  # Independent gold (used when hero has no faction)
 
     # Runtime state (not serialised to config YAML)
     current_town: str = "liangshan"

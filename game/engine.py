@@ -137,6 +137,11 @@ class GameEngine:
             if h:
                 h.current_army = army_size
 
+        # Personal gold for heroes without a faction (재야 영웅)
+        for h in heroes:
+            if h.personal_gold == 0:
+                h.personal_gold = max(50, h.reputation * 10)
+
 
     def _load_factions(self) -> None:
         with open(self._config_dir / "factions.yaml", encoding="utf-8") as f:

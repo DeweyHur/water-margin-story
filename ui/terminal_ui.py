@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Optional
 
 import questionary
@@ -9,10 +10,15 @@ from prompt_toolkit.key_binding import KeyBindings
 from prompt_toolkit.layout import Layout
 from prompt_toolkit.layout.containers import VSplit, Window
 from prompt_toolkit.layout.controls import FormattedTextControl
+from rich.columns import Columns
 from rich.console import Console
+from rich.live import Live
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
+from game.combat_manager import BattleResult, BattleRoundData
+from models.army import Army
 from models.game_state import GameState
 from models.hero import Hero
 from models.town import Town
@@ -89,6 +95,7 @@ class TerminalUI:
         "bright_black":  "fg:ansibrightblack",
         "bold black on bright_yellow": "bold fg:ansiblack bg:ansibrightyellow",
         "bold black on yellow":        "bold fg:ansiblack bg:ansiyellow",
+        "bold black on bright_white":  "bold fg:ansiblack bg:ansiwhite",
         "bold white":  "bold fg:ansiwhite",
         "bold bright_white": "bold fg:ansiwhite",
     }
@@ -402,7 +409,7 @@ class TerminalUI:
             if tid == highlight_town_id:
                 return "bold black on bright_yellow"
             if tid == hero_current_town_id:
-                return "bold black on yellow"
+                return "bold black on bright_white"  # 흰 배경 = 현재 위치 (세력색과 겹치지 않음)
             if reachable_ids and tid in reachable_ids:
                 return "bold white"
             t = town_by_id.get(tid)
@@ -454,7 +461,9 @@ class TerminalUI:
             "[bright_red]■관군[/] [bright_green]■양산박[/] "
             "[bright_blue]■이룡산[/] [magenta]■청풍채[/] "
             "[cyan]■요나라[/] [yellow]■금나라[/] "
-            "[bright_black]· 미점령[/]  [bold black on yellow] 현재위치 [/]"
+            "[bright_black]· 미점령[/]  "
+            "[bold black on bright_white] 현재위치 [/]  "
+            "[bold black on bright_yellow] 대상 [/]"
         )
 
     def _map_legend_ptk_tokens(self) -> list[tuple[str, str]]:
@@ -466,7 +475,8 @@ class TerminalUI:
             ("fg:ansimagenta",     "■청풍채"),   ("", "  "),
             ("fg:ansicyan",        "■요나라"),   ("", "  "),
             ("fg:ansiyellow",      "■금나라"),   ("", "  "),
-            ("fg:ansibrightblack", "· 미점령\n"),
+            ("fg:ansibrightblack", "· 미점령"),  ("", "  "),
+            ("bold fg:ansiblack bg:ansiwhite",  " 현재위치 "),  ("", "\n"),
         ]
 
     def _render_static_map(
@@ -506,41 +516,152 @@ class TerminalUI:
 
     def choose_action(self, hero: Hero, state: GameState) -> str:
         """Full-screen action selector: left = info + action list, right = 2D map."""
-        choices = [
+        from models.hero import HeroClass as _HeroClass
+        town = state.towns[hero.current_town]
+        _is_own = town.controlled_by_faction == hero.faction_id
+        _is_neutral = hero.faction_id == "neutral"
+        _has_faction = hero.faction_id != "neutral" and state.factions.get(hero.faction_id) is not None
+        _can_join = _is_neutral and town.controlled_by_faction is not None
+
+        # Class-specific action labels
+        _class_action_labels = {
+            _HeroClass.WARRIOR:    "결투       — 수비대장 격투 (무력)",
+            _HeroClass.STRATEGIST: "모략       — 거점 교란·내정 지원 (지력)",
+            _HeroClass.RANGER:     "정찰       — 인근 일괄 탐문 (기민)",
+            _HeroClass.ROGUE:      "잠입       — 적 거점 침투·탈취 (기민)",
+        }
+        _class_label = _class_action_labels.get(hero.hero_class, "특기       — 전용 행동")
+
+        choices: list[tuple[str, str]] = [
             ("move",        "이동       — 인접 지역으로 이동"),
             ("investigate", "조사       — 현재 마을 탐문"),
             ("recruit",     "모병       — 병력 충원"),
-            ("admin",       "내정       — 거점 행정 강화 (세금·식량 증가)"),
-            ("siege",       "공성       — 마을 점령 시도"),
-            ("rest",        "휴식       — AP 회복"),
-            ("map",         "지도       — 거점 정보 확인 (AP 소모 없음)"),
-            ("end",         "턴 종료    — 다음 턴으로"),
+        ]
+        if _is_own:
+            choices.append(("admin", "내정       — 거점 행정 강화 (세금·식량 증가)"))
+        else:
+            if hero.current_army > 0 or not _is_neutral:
+                choices.append(("siege", "공성       — 마을 점령 시도"))
+        choices.append(("class_action", _class_label))
+        if _can_join:
+            choices.append(("join", "합류       — 현 세력에 가담"))
+        _rest_desc = "휴식       — HP 회복 + 병력 보충" if _is_own else "휴식       — HP 회복 + 현지 탐문"
+        choices += [
+            ("rest", _rest_desc),
+            ("map",  "지도       — 거점 정보 확인 (AP 소모 없음)"),
+            ("end",  "턴 종료    — 다음 턴으로"),
         ]
 
         cursor = [0]
         result: list[str] = [choices[0][0]]
         faction = state.factions.get(hero.faction_id)
-        town = state.towns[hero.current_town]
 
         _all_coords, _max_col, _max_row, _coord_to_id = self._get_map_grid_data(state)
         town_by_id = {t.id: t for t in state.towns.values()}
 
+        # Class action relevant stat colour hint
+        _class_stat_hint = {
+            _HeroClass.WARRIOR:    ("무력", hero.strength),
+            _HeroClass.STRATEGIST: ("지력", hero.intelligence),
+            _HeroClass.RANGER:     ("기민", hero.agility),
+            _HeroClass.ROGUE:      ("기민", hero.agility),
+        }
+        _stat_name, _stat_val = _class_stat_hint.get(hero.hero_class, ("통솔", hero.leadership))
+
         def left_text() -> list[tuple[str, str]]:
-            fname = faction.name_ko if faction else "?"
+            fname = faction.name_ko if faction else "무소속"
+            fcolor = self._RICH_TO_PTK.get(faction.color if faction else "bright_black", "")
+
+            # 현재 위치 지배 세력
+            town_faction = state.factions.get(town.controlled_by_faction or "")
+            town_fname = town_faction.name_ko if town_faction else "무소속"
+            tfcolor = self._RICH_TO_PTK.get(town_faction.color if town_faction else "bright_black", "fg:ansibrightblack")
+            is_own = town.controlled_by_faction == hero.faction_id
+
+            # Hero class label
+            _class_ko = {
+                _HeroClass.WARRIOR: "무장",
+                _HeroClass.STRATEGIST: "군사",
+                _HeroClass.RANGER: "유협",
+                _HeroClass.ROGUE: "의적",
+            }.get(hero.hero_class, "")
+
             lines: list[tuple[str, str]] = [
                 ("bold fg:ansiyellow", f" 제 {state.turn} 턴  (남은: {state.turns_remaining()})\n"),
                 ("", "─" * 28 + "\n"),
-                ("bold fg:ansicyan", f" {hero.name_ko}\n"),
-                ("", f" 위치  : {town.name_ko}\n"),
-                ("", f" 세력  : {fname}\n"),
+                ("bold fg:ansicyan", f" {hero.name_ko}"),
+                ("fg:ansibrightblack", f"  [{_class_ko}]\n"),
+                ("fg:ansibrightblack", " 세력  : "),
+                (fcolor or "bold", f"{fname}\n"),
+                ("", f" 병력  : {hero.current_army:,}  AP: {hero.action_points}\n"),
             ]
             if faction:
                 lines += [
-                    ("", f" 금전  : {faction.gold}   군량: {faction.food}\n"),
-                    ("", f" 명성  : {faction.prestige}   안정도: {state.dynasty_stability}\n"),
+                    ("", f" 금전  : {faction.gold:,}   군량: {faction.food:,}\n"),
                 ]
+            else:
+                # 재야 영웅: 개인 군자금 표시
+                lines += [
+                    ("fg:ansibrightblack", " 군자금: "),
+                    ("fg:ansiyellow", f"{hero.personal_gold:,} 금\n"),
+                ]
+            # Class-specific stat highlight
             lines += [
-                ("", f" 병력  : {hero.current_army}  AP: {hero.action_points}\n"),
+                ("fg:ansibrightblack", f" {_stat_name}특기: "),
+                ("bold fg:ansiyellow", f"{_stat_val}/10  "),
+                ("fg:ansibrightblack", f"({_class_label[:4]})\n"),
+            ]
+            lines += [
+                ("", "─" * 28 + "\n"),
+                ("bold underline", f" 현재 위치: {town.name_ko}\n"),
+                ("", "─" * 28 + "\n"),
+                ("fg:ansibrightblack", " 종류   : "),
+                ("", f"{self._TYPE_ICON.get(town.town_type, '?')}\n"),
+                ("fg:ansibrightblack", " 인구   : "),
+                ("", f"{town.population:,}명\n"),
+                ("fg:ansibrightblack", " 지배세력: "),
+                (tfcolor, f"{town_fname}\n"),
+            ]
+            if town_faction:
+                lines += [
+                    ("fg:ansibrightblack", " 수비대 : "),
+                    ("", f"{town.garrison_strength * 200:,}명\n"),
+                    ("fg:ansibrightblack", " 방어도 : "),
+                    ("", f"{'★' * town.defense_level}{'☆' * (10 - town.defense_level)}\n"),
+                ]
+                if town.max_wall_hp > 0:
+                    wall_pct = int(town.wall_integrity() * 100)
+                    wall_color = "fg:ansired" if wall_pct < 50 else "fg:ansigreen"
+                    lines += [
+                        ("fg:ansibrightblack", " 성벽   : "),
+                        (wall_color, f"{wall_pct}%\n"),
+                    ]
+                if is_own:
+                    lines += [
+                        ("fg:ansibrightblack", " 세금/턴: "),
+                        ("fg:ansiyellow", f"{town.tax_yield}\n"),
+                        ("fg:ansibrightblack", " 식량/턴: "),
+                        ("fg:ansigreen", f"{town.food_yield}\n"),
+                        ("fg:ansibrightblack", " 내정도 : "),
+                        ("", f"{town.admin_level}/10\n"),
+                    ]
+                else:
+                    clue_bar = "■" * town.clue_level + "□" * (5 - town.clue_level)
+                    lines += [
+                        ("fg:ansibrightblack", " 탐문도 : "),
+                        ("", f"{clue_bar} {town.clue_level}/5\n"),
+                    ]
+            else:
+                clue_bar = "■" * town.clue_level + "□" * (5 - town.clue_level)
+                lines += [
+                    ("fg:ansibrightblack", " (무주공산)\n"),
+                    ("fg:ansibrightblack", " 탐문도 : "),
+                    ("", f"{clue_bar} {town.clue_level}/5\n"),
+                ]
+            if town.gao_qiu_presence:
+                lines.append(("bold fg:ansired", " ⚠ 고구 세력 주둔 중\n"))
+
+            lines += [
                 ("", "─" * 28 + "\n"),
                 ("bold underline", " 행동 선택\n"),
                 ("", "─" * 28 + "\n"),
@@ -1238,23 +1359,559 @@ class TerminalUI:
             self._show_town_detail(open_detail[0], state)
 
 
-    def show_combat_preview(self, hero_town_id: str, target_town_id: str, state: GameState) -> None:
-        hero_town = state.towns.get(hero_town_id)
-        target_town = state.towns.get(target_town_id)
-        h_name = hero_town.name_ko if hero_town else hero_town_id
-        t_name = target_town.name_ko if target_town else target_town_id
-        self.console.clear()
-        self.console.print(f'  {h_name} ===> {t_name}  Attack Start!')
-        self._render_static_map(state, hero_town_id, highlight_town_id=target_town_id)
-        _pt_prompt('Press Enter to start battle...')
+    # ------------------------------------------------------------------
+    # Battle display helpers
+    # ------------------------------------------------------------------
 
-    def show_faction_change_animation(self, town_id: str, old_faction_id: str, new_faction_id: str, state: GameState) -> None:
-        import time
+    @staticmethod
+    def _hp_bar(current: int, maximum: int, width: int = 20, color: str = "cyan") -> str:
+        if maximum <= 0:
+            return "[grey50]" + "░" * width + "[/]"
+        filled = int(width * current / maximum)
+        bar = "█" * filled + "░" * (width - filled)
+        pct = int(100 * current / maximum)
+        return f"[{color}]{bar}[/] {pct:3d}%"
+
+    @staticmethod
+    def _morale_color(morale: int) -> str:
+        if morale < 30:
+            return "bold red"
+        if morale < 60:
+            return "yellow"
+        if morale < 80:
+            return "green"
+        return "bold green"
+
+    def _army_panel(self, army: Army, title: str, style: str = "blue") -> Panel:
+        mc = self._morale_color(army.morale)
+        unit_icons = {"infantry": "⚔️ 보병", "cavalry": "🐴 기병",
+                      "archer": "🏹 궁병", "navy": "⚓ 수군"}
+        icon = unit_icons.get(army.unit_type.value, "⚔️")
+        content = (
+            f"[bold]{army.name}[/]  {icon}\n"
+            f"병력: {self._hp_bar(army.troops, army.max_troops, 18, 'cyan')}"
+            f"  {army.troops:,}/{army.max_troops:,}\n"
+            f"사기: [{mc}]{self._hp_bar(army.morale, 100, 18, mc)}  {army.morale}[/{mc}]\n"
+            f"전투력: [bold yellow]{army.combat_power:.0f}[/]"
+        )
+        if army.catapults or army.siege_towers or army.battering_rams:
+            content += (
+                f"\n[dim]투석기:{army.catapults}  운제:{army.siege_towers}"
+                f"  충차:{army.battering_rams}[/]"
+            )
+        return Panel(content, title=f"[bold]{title}[/]", style=style, padding=(0, 1))
+
+    def _wall_panel(self, town: Town) -> Panel:
+        integrity = town.wall_integrity()
+        color = "green" if integrity > 0.5 else ("yellow" if integrity > 0.2 else "red")
+        bar = self._hp_bar(town.wall_hp, town.max_wall_hp, 24, color)
+        if integrity >= 0.9:
+            wall_char = "████████████████████"
+            wall_color = "bold white"
+        elif integrity >= 0.6:
+            wall_char = "████▓▓▓▓████▓▓▓▓████"
+            wall_color = "bold yellow"
+        elif integrity >= 0.3:
+            wall_char = "██░░▓▓░░██░░▓▓░░██░░"
+            wall_color = "yellow"
+        else:
+            wall_char = "░░░░▒▒░░░░▒▒░░░░▒▒░░"
+            wall_color = "red"
+        content = (
+            f"  [{wall_color}]{wall_char}[/{wall_color}]\n"
+            f"  [{wall_color}]{'  🏯  ' + town.name_ko + '  🏯':^20}[/{wall_color}]\n"
+            f"  [{wall_color}]{wall_char}[/{wall_color}]\n\n"
+            f"성벽 내구도: {bar}  {town.wall_hp}/{town.max_wall_hp}"
+        )
+        return Panel(content, title="[bold white]성벽[/bold white]", style="white", padding=(0, 1))
+
+    def _battle_status_table(
+        self,
+        attacker: Army,
+        defender: Army,
+        att_label: str,
+        def_label: str,
+        town: Optional[Town] = None,
+    ) -> Table:
+        """Single-frame status table used inside Rich Live."""
+        t = Table.grid(padding=(0, 2))
+        t.add_column(min_width=42)
+        t.add_column(min_width=42)
+        if town:
+            t.add_column(min_width=26)
+            t.add_row(
+                self._army_panel(attacker, att_label, "red"),
+                self._army_panel(defender, def_label, "blue"),
+                self._wall_panel(town),
+            )
+        else:
+            t.add_row(
+                self._army_panel(attacker, att_label, "red"),
+                self._army_panel(defender, def_label, "blue"),
+            )
+        return t
+
+    # ------------------------------------------------------------------
+    # Recruit preview
+    # ------------------------------------------------------------------
+
+    def show_recruit_preview(
+        self,
+        hero: Hero,
+        town: Town,
+        recruit_count: int,
+        cost: int,
+        faction_gold: int,
+    ) -> bool:
+        """Preview panel before recruitment. Returns False if user cancels."""
+        can_afford = faction_gold >= cost
+        stat_bar = self._hp_bar(hero.leadership, 10, 16, "yellow")
+
+        lines = [
+            "",
+            f"  [bold yellow]\u2605 \ud1b5\uc194\ub825[/]  {stat_bar}  [bold yellow]{hero.leadership}[/]",
+            f"  [dim](\ubaa8\uc9d1 \uaddc\ubaa8 = \ud1b5\uc194\ub825 \xd7 100)[/]",
+            "",
+            "  " + "\u2500" * 36,
+            f"  \ud604\uc7ac \ubcd1\ub825   [dim]{hero.current_army:,}\uba85[/]",
+            f"  \ubaa8\uc9d1 \uc608\uc0c1   [bold green]+{recruit_count:,}\uba85[/]",
+            f"  \uc608\uc0c1 \ud569\uacc4   [bold]{hero.current_army + recruit_count:,}\uba85[/]",
+            "",
+            (f"  \ube44\uc6a9  [bold red]-{cost} \uae08[/]  [dim](\ubcf4\uc720: {faction_gold:,})[/]  [bold red]\u274c \ubd80\uc871[/]"
+             if not can_afford else
+             f"  \ube44\uc6a9  [bold yellow]-{cost} \uae08[/]  [dim](\ubcf4\uc720: {faction_gold:,})[/]"),
+        ]
+        self.console.print(Panel(
+            "\n".join(lines),
+            title=f"[bold yellow]\ubaa8\ubcd1 \uc608\uc0c1 \u2014 {hero.name_ko}[/]",
+            border_style="yellow",
+            padding=(0, 1),
+        ))
+        if not can_afford:
+            import questionary as _q
+            _q.press_any_key_to_continue("[ \uc544\ubb34 \ud0a4 ] \ub3cc\uc544\uac00\uae30...").ask()
+            return False
+        import questionary as _q
+        return bool(_q.confirm("  \ubaa8\ubcd1\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?", default=True, style=_STYLE).ask())
+
+    # ------------------------------------------------------------------
+    # Admin preview
+    # ------------------------------------------------------------------
+
+    def show_admin_preview(
+        self,
+        hero: Hero,
+        town: Town,
+        gain: int,
+    ) -> bool:
+        """Preview panel before admin action. Returns False if user cancels."""
+        new_level = min(10, town.admin_level + gain)
+        old_tax  = int(town.tax_yield  * town.admin_level / 5)
+        new_tax  = int(town.tax_yield  * new_level / 5)
+        old_food = int(town.food_yield * town.admin_level / 5)
+        new_food = int(town.food_yield * new_level / 5)
+
+        stat_bar = self._hp_bar(hero.intelligence, 10, 16, "cyan")
+
+        def _adm_bar(val: float, width: int = 16) -> str:
+            filled = int(round(val * width / 10))
+            return "[yellow]" + "\u2588" * filled + "[/][dim]" + "\u2591" * (width - filled) + "[/]"
+
+        lines = [
+            "",
+            f"  [bold cyan]\u2605 \uc9c0\ub825[/]  {stat_bar}  [bold cyan]{hero.intelligence}[/]",
+            f"  [dim](\ub0b4\uc815 \uc0c1\uc2b9\ud3ed = \uc9c0\ub825 \xf7 4,  \ucd5c\uc18c +1)[/]",
+            "",
+            "  " + "\u2500" * 36,
+            (f"  \ub0b4\uc815 \uc218\uc900  "
+             f"{_adm_bar(town.admin_level)} [dim]{town.admin_level}[/]  \u2192  "
+             f"{_adm_bar(new_level)} [bold yellow]{new_level}[/]  / 10"
+             + (f"  [bold yellow](+{gain})[/]" if gain > 0 else "")),
+            "",
+            (f"  \uc138\uae08 \uc218\uc785  [dim]{old_tax}[/] \u2192 [bold green]{new_tax}[/] / \ud134"
+             + (f"  [green](+{new_tax - old_tax})[/]" if new_tax > old_tax else "")),
+            (f"  \uc2dd\ub7c9 \uc218\uc785  [dim]{old_food}[/] \u2192 [bold green]{new_food}[/] / \ud134"
+             + (f"  [green](+{new_food - old_food})[/]" if new_food > old_food else "")),
+        ]
+        self.console.print(Panel(
+            "\n".join(lines),
+            title=f"[bold yellow]\ub0b4\uc815 \uac15\ud654 \uc608\uc0c1 \u2014 {hero.name_ko}[/]",
+            border_style="yellow",
+            padding=(0, 1),
+        ))
+        import questionary as _q
+        return bool(_q.confirm("  \ub0b4\uc815\uc744 \uac15\ud654\ud558\uc2dc\uaca0\uc2b5\ub2c8\uae4c?", default=True, style=_STYLE).ask())
+
+    # ------------------------------------------------------------------
+    # Recruit animation
+    # ------------------------------------------------------------------
+
+    def show_recruit_animation(
+        self,
+        hero: Hero,
+        town: Town,
+        old_army: int,
+        recruit_count: int,
+        cost: int,
+    ) -> None:
+        """Animated troop counter ticking up during recruitment."""
+        import questionary
+
+        new_army = old_army + recruit_count
+        steps = 12
+        faction_name = town.name_ko
+
+        def _frame(current: int) -> Table:
+            bar = self._hp_bar(current, max(new_army, 1), 24, "cyan")
+            t = Table.grid(padding=(0, 1))
+            t.add_column()
+            t.add_row(f"[bold cyan]{faction_name}[/] 모병 진행 중\n")
+            t.add_row(
+                f"[dim]병력[/]  {bar}"
+                f"  [bold yellow]{current:,}[/][dim]/{new_army:,}명[/]\n"
+            )
+            t.add_row(
+                f"[dim]증가[/]  [bold green]+{recruit_count:,}명[/]   "
+                f"[dim]비용[/]  [bold red]-{cost}[/] 금\n"
+            )
+            return t
+
+        with Live(console=self.console, refresh_per_second=20, transient=False) as live:
+            for step in range(steps + 1):
+                current = int(old_army + recruit_count * step / steps)
+                live.update(
+                    Panel(_frame(current),
+                          title=f"[bold yellow]모병 — {hero.name_ko}[/]",
+                          border_style="yellow", padding=(1, 2))
+                )
+                time.sleep(0.06)
+            # Final flash: highlight the completed row
+            live.update(
+                Panel(_frame(new_army),
+                      title="[bold green]모병 완료 ✓[/]",
+                      border_style="bright_green", padding=(1, 2))
+            )
+            time.sleep(0.4)
+        questionary.press_any_key_to_continue("[ 아무 키 ] 계속...").ask()
+
+    # ------------------------------------------------------------------
+    # Admin animation
+    # ------------------------------------------------------------------
+
+    def show_admin_animation(
+        self,
+        hero: Hero,
+        town: Town,
+        old_level: int,
+        new_level: int,
+    ) -> None:
+        """Animated admin bar + income counters ticking up."""
+        import questionary
+
+        old_tax = int(town.tax_yield * old_level / 5)
+        new_tax = int(town.tax_yield * new_level / 5)
+        old_food = int(town.food_yield * old_level / 5)
+        new_food = int(town.food_yield * new_level / 5)
+        steps = 14
+
+        def _admin_bar(val: float, width: int = 20) -> str:
+            filled = int(round(val * width / 10))
+            return "[yellow]" + "█" * filled + "[/][dim]" + "░" * (width - filled) + "[/]"
+
+        def _frame(frac: float) -> Table:
+            cur_level = old_level + (new_level - old_level) * frac
+            cur_tax   = old_tax   + (new_tax   - old_tax)   * frac
+            cur_food  = old_food  + (new_food  - old_food)  * frac
+            t = Table.grid(padding=(0, 1))
+            t.add_column()
+            t.add_row(f"[bold cyan]{town.name_ko}[/] 내정 강화\n")
+            t.add_row(
+                f"내정 수준  {_admin_bar(cur_level)}"
+                f"  [bold yellow]{cur_level:.1f}[/] / 10\n"
+            )
+            t.add_row(
+                f"세금 수입  [dim]{old_tax}[/] → "
+                f"[bold green]{int(cur_tax):,}[/] / 턴\n"
+            )
+            t.add_row(
+                f"식량 수입  [dim]{old_food}[/] → "
+                f"[bold green]{int(cur_food):,}[/] / 턴\n"
+            )
+            return t
+
+        with Live(console=self.console, refresh_per_second=20, transient=False) as live:
+            for step in range(steps + 1):
+                frac = step / steps
+                live.update(
+                    Panel(_frame(frac),
+                          title=f"[bold yellow]내정 강화 — {hero.name_ko}[/]",
+                          border_style="yellow", padding=(1, 2))
+                )
+                time.sleep(0.07)
+            # Final frame: exact values, green border flash
+            live.update(
+                Panel(_frame(1.0),
+                      title="[bold green]내정 강화 완료 ✓[/]",
+                      border_style="bright_green", padding=(1, 2))
+            )
+            time.sleep(0.4)
+        questionary.press_any_key_to_continue("[ 아무 키 ] 계속...").ask()
+
+    # ------------------------------------------------------------------
+    # Step 1 — Combat location announcement
+    # ------------------------------------------------------------------
+
+    def show_battle_announcement(
+        self,
+        attacker_town_id: str,
+        target_town_id: str,
+        state: GameState,
+    ) -> None:
+        """Step 1: 어느 지역에서 전투가 일어나는지 지도와 함께 보여줌."""
+        attacker_town = state.towns.get(attacker_town_id)
+        target_town = state.towns.get(target_town_id)
+        a_name = attacker_town.name_ko if attacker_town else attacker_town_id
+        t_name = target_town.name_ko if target_town else target_town_id
+
+        self.console.clear()
+        self.console.print(Panel(
+            f"[bold red]⚔️  공성전 발발![/]\n\n"
+            f"  [cyan]{a_name}[/]  ━━▶  [bold yellow]{t_name}[/]\n\n"
+            f"  [dim]{a_name} 주둔 병력이 {t_name}을(를) 공격합니다.[/]",
+            title="[bold red]전투 선포[/]",
+            border_style="red",
+            padding=(1, 4),
+        ))
+        self.console.print()
+        self._render_static_map(state, attacker_town_id, highlight_town_id=target_town_id)
+        _pt_prompt("\n  [ Enter ] 전투 배치 확인으로 → ")
+
+    # ------------------------------------------------------------------
+    # Step 2 — Army deployment overview
+    # ------------------------------------------------------------------
+
+    def show_battle_deployment(
+        self,
+        attacker: Army,
+        defender: Army,
+        town: Town,
+        attacker_general: Optional[Hero] = None,
+        defender_general: Optional[Hero] = None,
+    ) -> None:
+        """Step 2: 군대 배치 개괄."""
+        self.console.clear()
+        self.console.rule("[bold yellow]⚔️  전투 배치[/]")
+        self.console.print()
+
+        # Generals row
+        if attacker_general or defender_general:
+            ag_name = f"[bold red]{attacker_general.name_ko}[/] 「{attacker_general.nickname}」" if attacker_general else "[dim]지휘관 없음[/]"
+            dg_name = f"[bold blue]{defender_general.name_ko}[/] 「{defender_general.nickname}」" if defender_general else "[dim]지휘관 없음[/]"
+            gen_table = Table.grid(padding=(0, 4))
+            gen_table.add_column(min_width=40, justify="center")
+            gen_table.add_column(min_width=40, justify="center")
+            gen_table.add_row(
+                Panel(ag_name, title="[bold]공격 지휘관[/]", border_style="red"),
+                Panel(dg_name, title="[bold]수비 지휘관[/]", border_style="blue"),
+            )
+            self.console.print(gen_table)
+
+        self.console.print(Columns([
+            self._army_panel(attacker, "공격군", "red"),
+            self._wall_panel(town),
+            self._army_panel(defender, "수비군", "blue"),
+        ]))
+        self.console.print()
+        _pt_prompt("  [ Enter ] 전투 시작 → ")
+
+    # ------------------------------------------------------------------
+    # Step 3 — Round-by-round animation callback
+    # ------------------------------------------------------------------
+
+    def make_round_callback(
+        self,
+        attacker: Army,
+        defender: Army,
+        town: Optional[Town],
+    ):
+        """
+        Returns a callback(BattleRoundData) that animates the round in-place
+        using Rich Live, then waits for Enter.
+        """
+        console = self.console
+
+        def _on_round(rd: BattleRoundData) -> None:
+            phase_label = {
+                "bombardment": "💣 포격 단계",
+                "assault":     f"⚔️  {rd.round_num}라운드 돌격",
+                "field":       f"⚔️  {rd.round_num}라운드",
+            }.get(rd.phase, f"라운드 {rd.round_num}")
+
+            console.clear()
+            console.rule(f"[bold white]{phase_label}[/]")
+            console.print()
+
+            # ── Animated gauge update (빠른 롤링, 0.5s) ──────────────────
+            steps = 8
+            with Live(console=console, refresh_per_second=12) as live:
+                for step in range(steps + 1):
+                    frac = step / steps
+                    # Interpolate troop/morale between before→after
+                    a_tr = int(rd.att_troops_before + (rd.att_troops_after - rd.att_troops_before) * frac)
+                    a_mo = int(rd.att_morale_before + (rd.att_morale_after - rd.att_morale_before) * frac)
+                    d_tr = int(rd.def_troops_before + (rd.def_troops_after - rd.def_troops_before) * frac)
+                    d_mo = int(rd.def_morale_before + (rd.def_morale_after - rd.def_morale_before) * frac)
+
+                    # Build temporary army snapshots for the panel
+                    a_snap = attacker.model_copy(update={"troops": max(0, a_tr), "morale": max(0, a_mo)})
+                    d_snap = defender.model_copy(update={"troops": max(0, d_tr), "morale": max(0, d_mo)})
+
+                    if town is not None:
+                        w_hp  = int(rd.wall_hp_before + (rd.wall_hp_after - rd.wall_hp_before) * frac)
+                        t_snap = town.model_copy(update={"wall_hp": max(0, w_hp)})
+                        frame = self._battle_status_table(a_snap, d_snap, "공격군 ⚔️", f"수비군 🛡  ({town.name_ko})", t_snap)
+                    else:
+                        frame = self._battle_status_table(a_snap, d_snap, "공격군 ⚔️", "수비군 🛡")
+
+                    live.update(frame)
+                    time.sleep(0.06)
+
+            # ── Round events ─────────────────────────────────────────────
+            console.print()
+            for ev in rd.events:
+                console.print(f"  [yellow]{ev}[/]")
+            console.print()
+            _pt_prompt("  [ Enter ] 다음 라운드 → ")
+
+        return _on_round
+
+    # ------------------------------------------------------------------
+    # Step 4 — Battle result screen
+    # ------------------------------------------------------------------
+
+    def show_battle_result(
+        self,
+        result: BattleResult,
+        attacker: Army,
+        defender: Army,
+        town: Town,
+    ) -> None:
+        """Step 4: 전투 결과."""
+        won = result.winner == attacker.faction_id
+        self.console.clear()
+        self.console.rule("[bold white]⚔️  전투 결과[/]")
+        self.console.print()
+
+        # Final army status
+        self.console.print(Columns([
+            self._army_panel(
+                attacker,
+                f"{'✅ 승리' if won else '❌ 패배'} — {attacker.name}",
+                "green" if won else "red",
+            ),
+            self._army_panel(
+                defender,
+                f"{'❌ 패배' if won else '✅ 승리'} — {defender.name}",
+                "red" if won else "green",
+            ),
+        ]))
+        self.console.print()
+
+        # Summary panel
+        if won:
+            result_text = (
+                f"[bold green]✅ 공성전 승리![/]\n\n"
+                f"  [bold]{attacker.name}[/]이(가) [bold yellow]{town.name_ko}[/]을(를) 점령했다!\n\n"
+                f"  공격군 손실: [red]{result.attacker_losses:,}명[/]   "
+                f"수비군 손실: [cyan]{result.defender_losses:,}명[/]   "
+                f"성벽 피해: [yellow]{result.wall_damage} HP[/]\n"
+                f"  전투 라운드: {result.turns_fought}"
+            )
+            style = "green"
+        else:
+            result_text = (
+                f"[bold red]❌ 공성전 실패![/]\n\n"
+                f"  [bold]{attacker.name}[/]이(가) [bold yellow]{town.name_ko}[/] 점령에 실패했다.\n\n"
+                f"  공격군 손실: [red]{result.attacker_losses:,}명[/]   "
+                f"수비군 손실: [cyan]{result.defender_losses:,}명[/]   "
+                f"성벽 피해: [yellow]{result.wall_damage} HP[/]\n"
+                f"  전투 라운드: {result.turns_fought}"
+            )
+            style = "red"
+        self.console.print(Panel(result_text, title="[bold]전투 결과[/]", border_style=style, padding=(1, 4)))
+        self.console.print()
+        _pt_prompt("  [ Enter ] 지도로 돌아가기 → ")
+
+    # ------------------------------------------------------------------
+    # Step 5 — Post-battle map highlight
+    # ------------------------------------------------------------------
+
+    def show_battle_map_update(
+        self,
+        town_id: str,
+        old_faction_id: Optional[str],
+        new_faction_id: str,
+        state: GameState,
+        captured: bool,
+    ) -> None:
+        """Step 5: 점령 결과를 지도에서 시각적으로 보여줌."""
         town = state.towns.get(town_id)
         t_name = town.name_ko if town else town_id
-        for _ in range(3):
-            self.console.clear()
-            self._render_static_map(state, town_id, highlight_town_id=town_id)
-            time.sleep(0.5)
+
+        old_faction = state.factions.get(old_faction_id or "")
+        new_faction = state.factions.get(new_faction_id)
+        old_name = old_faction.name_ko if old_faction else (old_faction_id or "미점령")
+        new_name = new_faction.name_ko if new_faction else new_faction_id
+
         self.console.clear()
-        self.console.print(f'  Captured: {t_name}  {old_faction_id} -> {new_faction_id}')
+        if captured:
+            self.console.print(Panel(
+                f"[bold yellow]{t_name}[/] 점령!\n\n"
+                f"  [dim]{old_name}[/]  ➜  [bold green]{new_name}[/]",
+                title="[bold green]영토 변화[/]",
+                border_style="green",
+                padding=(1, 4),
+            ))
+        else:
+            self.console.print(Panel(
+                f"[bold yellow]{t_name}[/] 수성 성공\n\n"
+                f"  [bold cyan]{old_name}[/] 지속 통제",
+                title="[bold cyan]영토 유지[/]",
+                border_style="cyan",
+                padding=(1, 4),
+            ))
+        self.console.print()
+
+        # Blink highlight on map (3 flashes)
+        player_hero = state.get_player_hero()
+        hero_town = player_hero.current_town if player_hero else town_id
+        for flash in range(6):
+            self.console.clear()
+            if flash % 2 == 0:
+                self._render_static_map(state, hero_town, highlight_town_id=town_id)
+            else:
+                self._render_static_map(state, hero_town)
+            time.sleep(0.35)
+
+        self.console.clear()
+        self._render_static_map(state, hero_town, highlight_town_id=town_id)
+        self.console.print()
+        _pt_prompt("  [ Enter ] 계속 → ")
+
+    # ------------------------------------------------------------------
+    # Legacy compat wrappers (kept for any AI-path callers)
+    # ------------------------------------------------------------------
+
+    def show_combat_preview(self, hero_town_id: str, target_town_id: str, state: GameState) -> None:
+        """Redirects to step-1 announcement."""
+        self.show_battle_announcement(hero_town_id, target_town_id, state)
+
+    def show_faction_change_animation(
+        self,
+        town_id: str,
+        old_faction_id: str,
+        new_faction_id: str,
+        state: GameState,
+    ) -> None:
+        """Redirects to step-5 map update."""
+        self.show_battle_map_update(town_id, old_faction_id, new_faction_id, state, captured=True)
