@@ -1098,12 +1098,72 @@ class TerminalUI:
             sel = town_by_id[sel_id]
             clue = 5 if sel_id == hero_town else sel.clue_level
 
+            # ── Player faction block ───────────────────────────────────────
+            lines: list[tuple[str, str]] = []
+            if player_hero:
+                pfaction = state.factions.get(player_hero.faction_id)
+                pfc = self._RICH_TO_PTK.get(pfaction.color if pfaction else "white", "")
+                pfname = pfaction.name_ko if pfaction else player_hero.faction_id
+                p_towns = [t for t in towns if t.controlled_by_faction == player_hero.faction_id]
+                lines += [
+                    ("bold underline", " 내 세력\n"),
+                    ("", "─" * 48 + "\n"),
+                    ("fg:ansibrightblack", " 세력  : "),
+                    (pfc or "bold", f"{pfname}\n"),
+                    ("fg:ansibrightblack", " 영웅  : "),
+                    ("bold", f"{player_hero.name_ko}  "),
+                    ("fg:ansibrightblack", "거점 "),
+                    ("bold", f"{player_hero.current_town}\n"),
+                ]
+                if pfaction:
+                    lines += [
+                        ("fg:ansibrightblack", " 자금  : "),
+                        ("fg:ansiyellow",      f"{pfaction.gold:,} 관\n"),
+                        ("fg:ansibrightblack", " 식량  : "),
+                        ("fg:ansigreen",       f"{pfaction.food:,} 석\n"),
+                    ]
+                lines += [
+                    ("fg:ansibrightblack", " 거점  : "),
+                    ("bold", f"{len(p_towns)}곳  "),
+                ]
+                for pt in p_towns[:6]:
+                    fc2 = self._RICH_TO_PTK.get(pfaction.color if pfaction else "white", "")
+                    lines.append((fc2 or "", f"{pt.name_ko} "))
+                if len(p_towns) > 6:
+                    lines.append(("fg:ansibrightblack", f"+{len(p_towns)-6}…"))
+                lines.append(("", "\n"))
+                lines.append(("", "\n"))
+
+            # ── Map canvas ─────────────────────────────────────────────────
             canvas, cw, ch_h = self._build_map_canvas(state, hero_town, sel_id)
-            lines: list[tuple[str, str]] = [("bold underline", " 전략 지도\n")]
+            lines += [("bold underline", " 전략 지도\n")]
             lines += self._canvas_to_ptk_tokens(canvas, cw, ch_h)
             lines += self._map_legend_ptk_tokens()
 
-            # Brief info for selected town
+            # ── All factions overview ──────────────────────────────────────
+            lines += [
+                ("", "\n"),
+                ("bold underline", " 전체 세력\n"),
+                ("", "─" * 48 + "\n"),
+            ]
+            for fid, faction in state.factions.items():
+                fc = self._RICH_TO_PTK.get(faction.color, "")
+                f_towns = [t for t in towns if t.controlled_by_faction == fid]
+                is_player_f = player_hero and fid == player_hero.faction_id
+                marker = " ◀나" if is_player_f else "   "
+                town_names = " ".join(t.name_ko for t in f_towns[:5])
+                if len(f_towns) > 5:
+                    town_names += f" +{len(f_towns)-5}"
+                f_gold = f"{faction.gold:,}관" if is_player_f else "?"
+                lines += [
+                    (fc or "bold", f"{faction.name_ko:<6}"),
+                    ("fg:ansibrightblack", marker + "  "),
+                    ("", f"{len(f_towns)}거점  "),
+                    ("fg:ansibrightblack", f"{f_gold}\n"),
+                    ("fg:ansibrightblack", f"         {town_names}\n") if f_towns else ("", ""),
+                ]
+
+            # ── Selected town info ─────────────────────────────────────────
             faction = state.factions.get(sel.controlled_by_faction or "")
             fname = faction.name_ko if faction else "미점령"
             fc = self._RICH_TO_PTK.get(faction.color if faction else "bright_black", "")
